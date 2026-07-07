@@ -164,8 +164,14 @@ export const api = {
       method: 'PATCH',
       body: { rm_id: rmId },
     }),
-  adminBulkStatus: (ids, status) =>
-    request('/admin/submissions/bulk-status', { method: 'POST', body: { ids, status } }),
+  // statusReason is required by the backend when status === 'Rejected' (one
+  // of REJECTED_REASONS) and ignored/cleared otherwise — same rule as the
+  // single-row adminChangeStatus above.
+  adminBulkStatus: (ids, status, statusReason = null) =>
+    request('/admin/submissions/bulk-status', {
+      method: 'POST',
+      body: statusReason == null ? { ids, status } : { ids, status, status_reason: statusReason },
+    }),
   adminListCpNotes: (cpId) => request(`/admin/cp/${cpId}/notes`),
   adminAddCpNote: (cpId, text) =>
     request(`/admin/cp/${cpId}/notes`, { method: 'POST', body: { text } }),

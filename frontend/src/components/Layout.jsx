@@ -4,6 +4,7 @@ import { api } from '../api';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useTheme } from '../contexts/ThemeContext.jsx';
 import BusyOverlay from './BusyOverlay.jsx';
+import CreateTicketButton from './tickets/CreateTicketButton.jsx';
 import {
   IconHome, IconBoard, IconEye, IconBuilding, IconTicket, IconLogs, IconUsers, IconProfile,
   IconSun, IconMoon, IconMenu, IconLogout, IconChevron,
@@ -33,6 +34,7 @@ export default function Layout() {
 
   const role = user?.role;
   const isAdmin = role === 'admin';
+  const isManager = role === 'manager';
   const canTickets = role === 'admin' || role === 'manager' || role === 'rm';
 
   // Poll "needs my action" ticket count for the nav dot (skip for roles with no
@@ -123,6 +125,7 @@ export default function Layout() {
           <button className="icon-btn topbar-menu" onClick={() => setMobileOpen(true)} aria-label="Menu"><IconMenu /></button>
           <h1>{title}</h1>
           <div className="topbar-spacer" />
+          {seg === 'tickets' && (isAdmin || isManager) && <CreateTicketButton />}
           <button className="icon-btn" onClick={toggle} aria-label="Toggle theme">
             {theme === 'dark' ? <IconSun /> : <IconMoon />}
           </button>
