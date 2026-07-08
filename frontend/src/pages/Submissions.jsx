@@ -4,12 +4,13 @@ import { useSearchParams } from 'react-router-dom';
 import { api, downloadAdminCsv } from '../api';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { STAGES } from '../format';
-import { IconSearch, IconFilter, IconDownload, IconPlus } from '../components/icons.jsx';
+import { IconSearch, IconFilter, IconDownload } from '../components/icons.jsx';
 import BoardView from '../components/submissions/BoardView.jsx';
 import TableView from '../components/submissions/TableView.jsx';
 import CardDetailModal from '../components/submissions/CardDetailModal.jsx';
 import FilterModal from '../components/submissions/FilterModal.jsx';
 import BulkBar from '../components/submissions/BulkBar.jsx';
+import Loading from '../components/Loading.jsx';
 
 const CITY_TABS = ['All', 'Noida', 'Gurgaon', 'Ghaziabad'];
 
@@ -85,8 +86,14 @@ export default function Submissions() {
   }, [submissions]);
 
   // On-behalf "Add Inventory" flow — trigger only for now; the modal itself
-  // (AddInventoryOnBehalf) hasn't been ported yet.
+  // (AddInventoryOnBehalf) hasn't been ported yet. The trigger button lives in
+  // the topbar (Layout) and fires this window event.
   const [addingInventory, setAddingInventory] = useState(false);
+  useEffect(() => {
+    const open = () => setAddingInventory(true);
+    window.addEventListener('submissions:add-inventory', open);
+    return () => window.removeEventListener('submissions:add-inventory', open);
+  }, []);
 
   // Filter bar state. FilterModal (P3.4) will render the actual UI for these.
   const [showFilters, setShowFilters] = useState(false);
@@ -285,7 +292,7 @@ export default function Submissions() {
       <div className="page-head">
         <h2>Submissions</h2>
         <div className="ph-sub muted">
-          {counts.Total != null ? `${counts.Total} total` : ''}
+          {loading ? <Loading /> : (counts.Total != null ? `${counts.Total} total` : '')}
         </div>
       </div>
 
@@ -369,16 +376,8 @@ export default function Submissions() {
           <IconDownload size={15} /> {exporting ? 'Exporting…' : 'Download CSV'}
         </button>
 
-        {canAct && (
-          <button
-            type="button"
-            className="btn-primary"
-            onClick={() => setAddingInventory(true)}
-            title="Add inventory on behalf of a CP"
-          >
-            <IconPlus size={15} /> Add Inventory
-          </button>
-        )}
+        {/* "Add Inventory" lives in the topbar now (Layout) — it fires the
+            `submissions:add-inventory` event, handled below. */}
       </div>
 
       <FilterModal

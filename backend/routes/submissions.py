@@ -56,10 +56,10 @@ def my_submissions_stats():
 # Shared SELECT for the CP/broker submission row shape. Used by both the list
 # and the single-detail endpoint so the two never drift. Append a WHERE clause.
 _SUBMISSIONS_SELECT = """
-                SELECT s.id, s.public_id, s.society_id, s.society_name, s.tower, s.unit_no, s.floor,
+                SELECT s.id, s.public_id, s.society_name, s.tower, s.unit_no, s.floor,
                        s.sqft, s.bhk, s.occupancy_status,
                        s.asking_price,
-                       s.status, s.status_reason, s.photos, s.videos, s.submitted_at,
+                       s.status, s.status_reason, s.submitted_by_name, s.photos, s.videos, s.submitted_at,
                        s.requested_visit_date, s.requested_visit_slot, s.requested_rm_id,
                        s.counter_offer_price, s.counter_offer_status, s.counter_offer_at,
                        s.counter_offer_response_text,
@@ -157,33 +157,19 @@ def create_submission():
     """Create a submission. Server-side duplicate check enforced (no bypass)."""
     data = request.get_json(silent=True) or {}
 
-    society_id = data.get("society_id")
-    society_name = to_str(data.get("society_name"), 200)
+    # Frontend now sends `society` (text) + `city` (text) directly. We keep
+    # reading `society_name` for back-compat, falling back to `society`.
+    society = to_str(data.get("society") or data.get("society_name"), 200)
+    society_name = to_str(data.get("society_name"), 200) or society
+    city_name = to_str(data.get("city"), 100)
 
-    if not society_id or not society_name:
-        return jsonify({"error": "society_id and society_name are required"}), 400
+    if not society or not city_name:
+        return jsonify({"error": "society and city are required"}), 400
 
-    conn = get_app_conn()
-    city_name = None
-    society_city_id = None
-    try:
-        with conn.cursor() as cur:
-            cur.execute("""
-                SELECT s.city_id, c.name AS city_name
-                FROM societies s
-                JOIN cities c ON s.city_id = c.id
-                WHERE s.id = %s
-            """, (society_id,))
-            soc_row = cur.fetchone()
-            if not soc_row:
-                return jsonify({"error": "Invalid society_id"}), 400
-            society_city_id = soc_row["city_id"]
-            city_name = soc_row["city_name"]
-            # Service-area restriction intentionally removed: the Step 1 city dropdown
-            # lets CPs pick any of the serviceable cities (Gurgaon, Noida, Ghaziabad),
-            # so they can legitimately submit outside their registered city.
-    finally:
-        put_app_conn(conn)
+    # Society/city come straight from the master_societies-backed Step 1 dropdown,
+    # so there's no app-DB existence check (the `societies` table is gone).
+    # Service-area restriction intentionally removed: the Step 1 city dropdown lets
+    # CPs pick any serviceable city, so they may submit outside their own city.
 
     # Refuse to insert if city doesn't have a defined public_id prefix.
     # (Prevents us from losing a submission — better to fail loud.)
@@ -199,7 +185,8 @@ def create_submission():
 
     # Run dup check in all cases — its result drives status, flags, and CP messaging.
     dup = check_duplicate(
-        society_id=society_id,
+        society=society,
+        city=city_name,
         bhk=to_str(data.get("bhk")),
         tower=None if skip_unit_details else to_str(data.get("tower")),
         unit_no=None if skip_unit_details else to_str(data.get("unit_no")),
@@ -210,18 +197,24 @@ def create_submission():
     # Perfect match = exact dup found in properties or other submissions
     # (only possible when unit details were given). It used to hard-block (409);
     # now it lets the submission through with a flag so CP can review/withdraw.
+    # Exact/perfect duplicate (tower+unit supplied). block=True → match is
+    # against a LIVE listing (auto-reject as Duplicacy). matched_rejected → the
+    # only exact hit is a previously-REJECTED lead: keep the perfect-match badge
+    # but route to Unapproved for admin review instead of auto-rejecting.
     is_perfect_match = (
         not skip_unit_details
         and dup.get("match_level") == "exact"
-        and bool(dup.get("block"))
     )
+    matched_rejected = is_perfect_match and bool(dup.get("matched_rejected"))
     is_unit_less = skip_unit_details
     has_collated_match = bool(dup.get("collated_match"))
     has_submissions_match = bool(dup.get("submissions_match"))
 
     # Status logic:
-    #   - Perfect match  → Rejected (status_reason='Duplicacy'; admin sees red
-    #                      card; CP saw 409 + Contact RM)
+    #   - Perfect match (live)     → Rejected (status_reason='Duplicacy'; admin
+    #                      sees red card; CP saw 409 + Contact RM)
+    #   - Perfect match (rejected lead) → Unapproved (badge kept, admin reviews
+    #                      a re-submission of a previously-rejected unit)
     #   - Unit-less      → Unapproved (CP didn't give tower/unit, admin must
     #                      verify before the listing enters the pipeline)
     #   - Collated match → Unapproved (scraper saw the same society+bhk+floor;
@@ -230,9 +223,12 @@ def create_submission():
     #                      dup (legacy "Add anyway" path) lands in Unapproved
     force_create = bool(data.get("force_create"))
     initial_status_reason = None
-    if is_perfect_match:
+    if is_perfect_match and not matched_rejected:
         initial_status = "Rejected"
         initial_status_reason = "Duplicacy"
+    elif matched_rejected:
+        # Perfect match, but only against a rejected lead → admin review.
+        initial_status = "Unapproved"
     elif is_unit_less:
         initial_status = "Unapproved"
     elif has_collated_match:
@@ -251,7 +247,7 @@ def create_submission():
     logging.getLogger(__name__).info(
         "[submission] cp_id=%s society=%r bhk=%r floor=%r skip_unit=%s perfect=%s "
         "collated=%s submissions=%s force_create=%s -> status=%s",
-        g.user.get("cp_id"), society_name, data.get("bhk"), data.get("floor"),
+        g.user.get("cp_id"), society, data.get("bhk"), data.get("floor"),
         skip_unit_details, is_perfect_match, has_collated_match, has_submissions_match,
         force_create, initial_status,
     )
@@ -266,11 +262,11 @@ def create_submission():
             # Routing: pick the listing's RM from the society mapping (or
             # fall back to a city RM). Stamped at insert so subsequent scope
             # queries don't need to re-resolve.
-            listing_rm_id = resolve_listing_rm(cur, society_id)
+            listing_rm_id = resolve_listing_rm(cur, society, city_name)
 
             cur.execute("""
                 INSERT INTO submissions (
-                    cp_id, society_id, society_name, city_id, public_id,
+                    cp_id, society_name, society, city, public_id,
                     tower, unit_no, floor, sqft, bhk,
                     occupancy_status,
                     asking_price, seller_name, seller_phone, photos,
@@ -291,9 +287,9 @@ def create_submission():
                 RETURNING id
             """, (
                 g.user["cp_id"],
-                society_id,
                 society_name,
-                society_city_id,
+                society,
+                city_name,
                 public_id,
                 to_str(data.get("tower"), 50),
                 to_str(data.get("unit_no"), 50),
@@ -404,12 +400,17 @@ def create_submission():
 @require_auth
 def check_duplicate_endpoint():
     data = request.get_json(silent=True) or {}
-    society_id = data.get("society_id")
-    if not society_id:
-        return jsonify({"error": "society_id is required"}), 400
+
+    # Frontend sends `society` (text) + `city` (text) directly; the helper works
+    # on the text columns and takes the society/city name pair.
+    society = to_str(data.get("society") or data.get("society_name"), 200)
+    city_name = to_str(data.get("city"), 100)
+    if not society or not city_name:
+        return jsonify({"error": "society and city are required"}), 400
 
     result = check_duplicate(
-        society_id=society_id,
+        society=society,
+        city=city_name,
         bhk=to_str(data.get("bhk")),
         tower=to_str(data.get("tower")),
         unit_no=to_str(data.get("unit_no")),
@@ -733,7 +734,7 @@ def _lock_own_submission(cur, sid):
     """Lock + fetch a submission, asserting the caller is its CP.
     Returns (row, None) on success or (None, (json_body, status))."""
     cur.execute(
-        "SELECT id, public_id, cp_id, city_id, status, photos, videos "
+        "SELECT id, public_id, cp_id, city, status, photos, videos "
         "FROM submissions WHERE id = %s FOR UPDATE",
         (sid,),
     )
@@ -752,7 +753,7 @@ def submission_rm_options(sid: int):
     conn = get_app_conn()
     try:
         with conn.cursor() as cur:
-            cur.execute("SELECT cp_id, city_id FROM submissions WHERE id = %s", (sid,))
+            cur.execute("SELECT cp_id, city FROM submissions WHERE id = %s", (sid,))
             row = cur.fetchone()
             if not row:
                 return jsonify({"error": "Submission not found"}), 404
@@ -760,16 +761,16 @@ def submission_rm_options(sid: int):
                 return jsonify({"error": "Not your submission"}), 403
 
             rms = []
-            city_id = row.get("city_id")
-            if city_id is not None:
+            city = row.get("city")
+            if city:
                 try:
                     cur.execute(
                         """
                         SELECT id, name FROM rms
-                        WHERE city_id = %s AND COALESCE(is_active, TRUE) = TRUE
+                        WHERE LOWER(TRIM(city)) = LOWER(TRIM(%s)) AND COALESCE(is_active, TRUE) = TRUE
                         ORDER BY name ASC, id ASC
                         """,
-                        (city_id,),
+                        (city,),
                     )
                     rms = cur.fetchall()
                 except Exception:
@@ -940,9 +941,9 @@ def book_visit(sid: int):
                 cur.execute("SAVEPOINT rmcheck")
                 try:
                     cur.execute(
-                        "SELECT name FROM rms WHERE id = %s AND city_id = %s "
+                        "SELECT name FROM rms WHERE id = %s AND LOWER(TRIM(city)) = LOWER(TRIM(%s)) "
                         "AND COALESCE(is_active, TRUE) = TRUE",
-                        (rm_id, row.get("city_id")),
+                        (rm_id, row.get("city")),
                     )
                     rm_row = cur.fetchone()
                     rms_checked = True

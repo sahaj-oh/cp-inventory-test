@@ -29,8 +29,9 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { ApiError, api } from '../api';
-import { validatePhone } from '../format';
+import { validatePhone, sanitizePhone } from '../format';
 import { IconLock } from '../components/icons.jsx';
+import Loading from '../components/Loading.jsx';
 
 const ROLE_OPTIONS = [
   { value: 'rm',      label: 'RM' },
@@ -279,7 +280,7 @@ export default function Users() {
       <div className="page-head">
         <h2>Users</h2>
         <div className="ph-sub muted">
-          {loading ? 'Loading…' : `${activeCount} active${inactiveCount > 0 ? `, ${inactiveCount} inactive` : ''}`}
+          {loading ? <Loading /> : `${activeCount} active${inactiveCount > 0 ? `, ${inactiveCount} inactive` : ''}`}
         </div>
       </div>
 
@@ -311,7 +312,7 @@ export default function Users() {
             <input
               placeholder="10-digit phone"
               value={newPhone}
-              onChange={(e) => setNewPhone(e.target.value)}
+              onChange={(e) => setNewPhone(sanitizePhone(e.target.value))}
               inputMode="numeric"
             />
           </div>

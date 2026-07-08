@@ -12,6 +12,7 @@
  * have none anyway, so it's rendered defensively.
  */
 import { useAuth } from '../contexts/AuthContext.jsx';
+import Loading from '../components/Loading.jsx';
 
 function initials(name) {
   const s = (name || '').trim();
@@ -31,7 +32,7 @@ function managerName(user) {
 
 export default function Profile() {
   const { user } = useAuth();
-  if (!user) return null;
+  if (!user) return <Loading />;
 
   const { name, phone, email, city, role } = user;
   const roleLower = (role || '').toLowerCase();

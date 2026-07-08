@@ -11,7 +11,7 @@ export default function CpApp() {
     <div className="app-shell-cp">
       {user?.impersonated_by && (
         <div className="imp-banner">
-          👁 Viewing as {user.name} · impersonated by {user.impersonated_by}
+          👁 Viewing as {user.name} · impersonated by {user.impersonated_by.name || user.impersonated_by.cp_code}
           <button className="btn-link" onClick={() => { clearSession(); window.location.assign('/'); }}>Exit</button>
         </div>
       )}

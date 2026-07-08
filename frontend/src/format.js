@@ -147,6 +147,17 @@ export function validatePhone(raw) {
   return { ok: true, cleaned: cleaned.slice(-10), error: null };
 }
 
+/**
+ * Sanitize a phone-input value for onChange: digits only (drops '+', spaces,
+ * and any non-digit), capped at 10 digits — or 12 when it starts with the
+ * country code '91' (so "91" + 10-digit national number is allowed).
+ */
+export function sanitizePhone(raw) {
+  const digits = String(raw || '').replace(/\D/g, '');
+  const max = digits.startsWith('91') ? 12 : 10;
+  return digits.slice(0, max);
+}
+
 // Display order for the stage tabs / columns. The STATUS values themselves
 // are unchanged; this is purely how they appear left-to-right in the UI.
 // Visit Scheduled + Visit Completed sit before Offer because admin

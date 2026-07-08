@@ -13,11 +13,14 @@ export default defineConfig({
         icons: [
           { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: '/icon-512.png', sizes: '512x512', type: 'image/png' },
-          { src: '/maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: '/maskable-icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
       workbox: { globPatterns: ['**/*.{js,css,html,ico,png,svg}'] },
-      devOptions: { enabled: true },
+      // Dev SW disabled: a dev service worker precaches the app and serves
+      // stale/broken content on reload (the "blank screen, stuck on Loading"
+      // symptom). The SW still ships in production builds (autoUpdate).
+      devOptions: { enabled: false },
     }),
   ],
   server: {

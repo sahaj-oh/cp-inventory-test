@@ -26,6 +26,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { ApiError, api } from '../api';
 import { formatDateTime, formatPrice } from '../format';
+import Loading from '../components/Loading.jsx';
 
 const PAGE_SIZE = 100;
 const HARD_CAP = 500;
@@ -314,7 +315,7 @@ export default function Logs() {
         </div>
         <div className="al-result-count">
           {loading
-            ? 'Loading…'
+            ? <Loading />
             : total > 0
               ? `${total.toLocaleString()}${data.cap_reached ? '+' : ''} rows · showing ${start}–${end}`
               : 'No rows'}
@@ -375,6 +376,11 @@ export default function Logs() {
             </tr>
           </thead>
           <tbody>
+            {loading && sortedRows.length === 0 && (
+              <tr>
+                <td className="al-empty" colSpan={6}><Loading /></td>
+              </tr>
+            )}
             {sortedRows.length === 0 && !loading && (
               <tr>
                 <td className="al-empty" colSpan={6}>No activity matches these filters.</td>

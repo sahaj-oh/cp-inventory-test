@@ -7,7 +7,7 @@ import BusyOverlay from './BusyOverlay.jsx';
 import CreateTicketButton from './tickets/CreateTicketButton.jsx';
 import {
   IconHome, IconBoard, IconEye, IconBuilding, IconTicket, IconLogs, IconUsers, IconProfile,
-  IconSun, IconMoon, IconMenu, IconLogout, IconChevron,
+  IconSun, IconMoon, IconMenu, IconLogout, IconChevron, IconPlus,
 } from './icons.jsx';
 
 const TITLES = {
@@ -36,6 +36,7 @@ export default function Layout() {
   const isAdmin = role === 'admin';
   const isManager = role === 'manager';
   const canTickets = role === 'admin' || role === 'manager' || role === 'rm';
+  const canAct = canTickets; // admin/manager/rm can perform actions (adds on behalf, etc.)
 
   // Poll "needs my action" ticket count for the nav dot (skip for roles with no
   // ticket access). 15s while visible; on focus; on local ticket mutations.
@@ -83,6 +84,7 @@ export default function Layout() {
     <div className={`app-shell ${collapsed ? 'collapsed' : ''}`}>
       <aside className={`sidebar ${mobileOpen ? 'open' : ''}`}>
         <div className="sidebar-brand">
+          <img src="/openhouse-logo.png" alt="" className="brand-logo" />
           <div className="brand-text">
             <div className="brand-name">Openhouse</div>
             <div className="brand-sub">CP Inventory</div>
@@ -126,6 +128,15 @@ export default function Layout() {
           <h1>{title}</h1>
           <div className="topbar-spacer" />
           {seg === 'tickets' && (isAdmin || isManager) && <CreateTicketButton />}
+          {seg === 'submissions' && canAct && (
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => window.dispatchEvent(new Event('submissions:add-inventory'))}
+            >
+              <IconPlus size={15} /> Add Inventory
+            </button>
+          )}
           <button className="icon-btn" onClick={toggle} aria-label="Toggle theme">
             {theme === 'dark' ? <IconSun /> : <IconMoon />}
           </button>

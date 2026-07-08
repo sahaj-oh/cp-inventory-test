@@ -27,12 +27,14 @@ function RequireRole({ user, roles, children }) {
 
 export default function App() {
   const { user, bootstrapping } = useAuth();
-  if (bootstrapping) return <div className="loading">Loading…</div>;
+  // Blank frame during the session probe — prevents a one-frame Login flash
+  // without a full-screen "Loading…" takeover.
+  if (bootstrapping) return <div style={{ minHeight: '100vh', background: 'var(--bg)' }} />;
   if (!user) return <Login />;
   if (!STAFF.includes(user.role)) return <CpApp />;   // role === 'cp'
 
   return (
-    <Suspense fallback={<div className="loading">Loading…</div>}>
+    <Suspense fallback={<div style={{ minHeight: '100vh', background: 'var(--bg)' }} />}>
       <Routes>
         <Route element={<Layout />}>
           <Route path="/" element={<Home />} />

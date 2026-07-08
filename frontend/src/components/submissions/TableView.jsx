@@ -14,6 +14,7 @@ import {
 } from '../../format';
 import MatchDetailsModal from '../MatchDetailsModal.jsx';
 import ExpandPanel from './ExpandPanel.jsx';
+import Loading from '../Loading.jsx';
 
 /**
  * Bottom-of-table infinite-scroll sentinel. Two modes:
@@ -46,7 +47,7 @@ function TableLoadMoreSentinel({ hasMore, loading, onVisible }) {
   if (!hasMore && !loading) return null;
   return (
     <div ref={ref} style={{ padding: '14px 0', textAlign: 'center', fontSize: 12, color: 'var(--text-muted)' }}>
-      {loading ? 'Loading more…' : ''}
+      {loading ? <Loading label="Loading more" /> : ''}
     </div>
   );
 }
@@ -148,7 +149,7 @@ export default function TableView({
   }, [merged, sort]);
 
   if (loading) {
-    return <div className="admin-table-loading">Loading submissions…</div>;
+    return <div className="admin-table-loading"><Loading label="Loading submissions" /></div>;
   }
   if (!merged || merged.length === 0) {
     return <div className="admin-table-loading">No submissions match.</div>;

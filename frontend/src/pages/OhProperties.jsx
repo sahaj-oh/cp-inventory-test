@@ -24,6 +24,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ApiError, api } from '../api';
 import { formatDateOnly } from '../format';
 import { IconFilter, IconClose } from '../components/icons.jsx';
+import Loading from '../components/Loading.jsx';
 
 const PAGE_SIZE = 100;
 
@@ -192,7 +193,7 @@ export default function OhProperties() {
       <div className="page-head">
         <h2>OH Properties</h2>
         <div className="ph-sub muted">
-          {loading ? 'Loading…' : `${data.total.toLocaleString()} rows · showing ${start}–${end}`}
+          {loading ? <Loading /> : `${data.total.toLocaleString()} rows · showing ${start}–${end}`}
         </div>
       </div>
 
@@ -269,7 +270,11 @@ export default function OhProperties() {
             </tr>
           </thead>
           <tbody>
-            {data.results.length === 0 && !loading ? (
+            {loading && data.results.length === 0 ? (
+              <tr>
+                <td colSpan={11} className="inv-empty"><Loading /></td>
+              </tr>
+            ) : data.results.length === 0 && !loading ? (
               <tr>
                 <td colSpan={11} className="inv-empty">No OH Properties match your filters.</td>
               </tr>

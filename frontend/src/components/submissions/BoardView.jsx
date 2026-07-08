@@ -12,6 +12,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { formatBhk, formatPrice, formatOhPrice, formatDateOnly, formatTime12, STAGES, timeAgo } from '../../format';
 import MatchDetailsModal from '../MatchDetailsModal.jsx';
+import Loading from '../Loading.jsx';
 
 /**
  * Infinite-scroll sentinel rendered at the bottom of each kanban column.
@@ -43,7 +44,7 @@ function LoadMoreSentinel({ hasMore, loading, onVisible }) {
   if (!hasMore && !loading) return null;
   return (
     <div ref={ref} style={{ padding: '10px 4px', textAlign: 'center', fontSize: 11, color: 'var(--text-faint)' }}>
-      {loading ? 'Loading more…' : ''}
+      {loading ? <Loading label="Loading more" /> : ''}
     </div>
   );
 }

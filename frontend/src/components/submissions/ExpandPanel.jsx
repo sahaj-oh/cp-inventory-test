@@ -10,6 +10,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api';
 import SubmissionSections from './SubmissionSections.jsx';
+import Loading from '../Loading.jsx';
 
 export default function ExpandPanel({ id, canAct, onChanged }) {
   const [data, setData] = useState(null); // null = loading
@@ -44,18 +45,7 @@ export default function ExpandPanel({ id, canAct, onChanged }) {
   if (!data) {
     return (
       <div className="expand-inner">
-        <div className="expand-sec expand-sec-wide">
-          <div className="inv-skel" style={{ width: '55%', marginBottom: 10 }} />
-          <div className="inv-skel" style={{ width: '90%', marginBottom: 10 }} />
-          <div className="inv-skel" style={{ width: '80%' }} />
-        </div>
-        <div className="expand-sec">
-          <div className="inv-skel" style={{ width: '70%', marginBottom: 10 }} />
-          <div className="inv-skel" style={{ width: '60%' }} />
-        </div>
-        <div className="expand-sec expand-sec-narrow">
-          <div className="inv-skel" style={{ width: '75%' }} />
-        </div>
+        <Loading />
       </div>
     );
   }

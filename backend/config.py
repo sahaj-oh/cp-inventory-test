@@ -68,6 +68,9 @@ class Config:
     # Generate a long random string (>= 48 chars) for production.
     RELAY_API_KEY = os.getenv("RELAY_API_KEY") or None
     RELAY_API_KEY_HEADER = (os.getenv("RELAY_API_KEY_HEADER") or "X-API-Key").strip() or "X-API-Key"
+    # Headers the relay uses to identify the acting salesperson for on-behalf submissions.
+    RELAY_SALES_ID_HEADER = (os.getenv("RELAY_SALES_ID_HEADER") or "X-Sales-Id").strip() or "X-Sales-Id"
+    RELAY_SALES_NAME_HEADER = (os.getenv("RELAY_SALES_NAME_HEADER") or "X-Sales-Name").strip() or "X-Sales-Name"
 
     # -------- Forms App integration (Schedule Visit) --------
     # External Forms app handles visit scheduling end-to-end. Admin clicks

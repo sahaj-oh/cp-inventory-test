@@ -1,9 +1,21 @@
-# backend
+# secrets / local env
 backend/.env
+frontend/.env
+*.local
+
+# python
 backend/venv/
 **/__pycache__/
 *.pyc
 .pytest_cache/
-# frontend (later phases)
+
+# node / build
 node_modules/
 dist/
+frontend/dev-dist/
+
+# os / editor
+.DS_Store
+
+# sdd scratch
+.superpowers/

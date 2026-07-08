@@ -301,7 +301,7 @@ export default function ScheduleVisitSection({ submission, canAct, onChanged }) 
               <div>
                 <label>Field Exec <span className="req">*</span></label>
                 {loadingExecs ? (
-                  <div className="muted" style={{ fontSize: 13, padding: '8px 0' }}>Loading…</div>
+                  <div className="muted" style={{ fontSize: 13, padding: '8px 0' }}><span className="loading-dots" aria-label="Loading" /></div>
                 ) : fieldExecs.length === 0 ? (
                   <div style={{ fontSize: 13, color: 'var(--red-fg)' }}>
                     No field execs available. Add users with can_visit=true in the properties DB.
