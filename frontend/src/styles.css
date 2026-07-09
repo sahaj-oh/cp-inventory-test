@@ -1252,8 +1252,32 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 }
 
 /* ===== Header ===== */
-.header { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 18px 20px; display: flex; justify-content: space-between; align-items: center; color: #fff; }
-.back-btn { background: none; border: none; color: #fff; font-size: 20px; cursor: pointer; padding: 0; }
+/* Plain greeting — no colored strip. Just "Hi, {user}" on the surface. */
+.header { background: var(--surface); padding: 20px 20px 4px; display: flex; align-items: center; color: var(--text); }
+.header > div { font-family: 'Fraunces', serif; }
+.back-btn { background: none; border: none; color: var(--text); font-size: 20px; cursor: pointer; padding: 0; }
+
+/* ===== Filter chips (neutral — brand when active, grey otherwise) ===== */
+.cp-filter { padding: 10px 6px; border-radius: 10px; border: 1.5px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; font-family: inherit; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60px; transition: all .15s; }
+.cp-filter:hover { border-color: var(--brand); }
+.cp-filter.active { background: var(--brand); border-color: var(--brand); color: #fff; }
+.cp-filter-count { font-size: 20px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+.cp-filter-lbl { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .3px; text-align: center; line-height: 1.2; opacity: .68; }
+.cp-filter.active .cp-filter-lbl { opacity: .95; }
+
+/* ===== Profile screen ===== */
+.prof-hero { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 18px 20px 4px; text-align: center; }
+.prof-avatar { width: 72px; height: 72px; border-radius: 50%; background: var(--brand-soft); color: var(--brand-strong); display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 700; font-family: 'Fraunces', serif; }
+.prof-name { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 600; color: var(--text); }
+.prof-sub { font-size: 13px; color: var(--text-muted); }
+.prof-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--hairline); }
+.prof-row:last-child { border-bottom: 0; }
+.prof-lbl { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+.prof-val { font-size: 14px; color: var(--text); font-weight: 600; text-align: right; word-break: break-word; }
+.prof-call, .prof-logout { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 12px; text-decoration: none; }
+/* Match the inventory-card inset so cards don't touch the screen edges. */
+.prof-card { margin-left: 20px; margin-right: 20px; }
+@media (max-width: 520px) { .prof-card { margin-left: 16px; margin-right: 16px; } }
 
 /* ===== Form cards & inputs ===== */
 .form-section { padding: 0 20px 20px; animation: cp-slideUp 0.25s ease; }
@@ -1297,21 +1321,41 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .badge-closed { background: #D1FAE5; color: var(--oh-green); }
 .badge-rejected { background: #FEE2E2; color: #D64045; }
 
-/* ===== Register Inventory pill =====
-   Sits bottom-right of the centered 480px container. Leaves space on the left
-   for the .rm-call-fab circle (52px wide + 16px gap = 68px reserved). Height
-   52px exactly matches .rm-call-fab for a clean aligned footer row. */
-.register-btn { position: fixed; bottom: 24px; left: calc(50% - 240px + 92px); right: calc(50% - 240px + 24px); height: 52px; padding: 0 18px; border-radius: 26px; background: var(--oh-orange); color: #fff; border: none; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 6px 20px rgba(255,107,43,0.3); transition: transform 0.15s; font-family: inherit; display: inline-flex; align-items: center; justify-content: center; gap: 8px; z-index: 40; white-space: nowrap; }
-.register-btn:hover { transform: scale(1.03); }
-.register-btn .plus { font-size: 22px; font-weight: 400; line-height: 1; }
-@media (max-width: 520px) { .register-btn { left: 88px; right: 20px; } }
-
-/* Call RM — floating tel: shortcut. Same position/size as CP's original
-   WhatsApp FAB; WhatsApp removed (P6 Task 1) in favor of a plain phone call,
-   in brand orange rather than WhatsApp green. */
-.rm-call-fab { position: fixed; bottom: 24px; left: calc(50% - 240px + 24px); width: 52px; height: 52px; border-radius: 50%; background: var(--oh-orange); display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 18px rgba(255,107,43,0.4); cursor: pointer; z-index: 50; text-decoration: none; transition: transform 0.15s; }
-.rm-call-fab:hover { transform: scale(1.08); }
-@media (max-width: 520px) { .rm-call-fab { left: 20px; } }
+/* ===== Bottom strip =====
+   Fixed bottom nav for the CP app (replaces the old register/call FABs).
+   Five slots: Call · Chat(soon) · +Add(big, pops above) · Profile(soon) ·
+   Log out. Pinned to the centered 480px column. */
+.cp-bottombar {
+  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 100%; max-width: 480px; height: 62px;
+  background: var(--surface); border-top: 1px solid var(--border);
+  box-shadow: 0 -3px 14px rgba(0,0,0,0.07);
+  display: flex; align-items: stretch; justify-content: space-around;
+  z-index: 50;
+}
+@supports (padding: env(safe-area-inset-bottom)) {
+  .cp-bottombar { height: calc(62px + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom); }
+}
+.cp-nav {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  background: none; border: none; cursor: pointer; font-family: inherit;
+  color: var(--text-muted); text-decoration: none;
+}
+.cp-nav:hover { color: var(--brand-strong); }
+.cp-nav.active { color: var(--brand); }
+.cp-nav-ic { display: flex; align-items: center; justify-content: center; line-height: 1; }
+.cp-nav-lbl { font-size: 10px; font-weight: 600; letter-spacing: .2px; }
+.cp-nav-soon { opacity: 0.38; cursor: default; }
+.cp-nav-soon:hover { color: var(--text-muted); }
+/* The big + — pops above the strip, brand orange, larger than the rest. */
+.cp-nav-add {
+  flex: 0 0 auto; align-self: center; width: 58px; height: 58px; margin-top: -26px;
+  border-radius: 50%; border: 4px solid var(--surface);
+  background: var(--brand); color: #fff; font-size: 32px; font-weight: 300; line-height: 1;
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  box-shadow: 0 6px 18px rgba(255,107,43,0.45); font-family: inherit; transition: transform 0.15s;
+}
+.cp-nav-add:hover { transform: scale(1.06); }
 
 /* ===== Society search dropdown ===== */
 .society-search-wrap { position: relative; }

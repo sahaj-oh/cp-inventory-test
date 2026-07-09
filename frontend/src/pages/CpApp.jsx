@@ -1,12 +1,33 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { api } from '../api';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { clearSession } from '../auth';
 import Dashboard from '../cp/Dashboard.jsx';
 import AddUnit from '../cp/AddUnit/index.jsx';
+import Profile from '../cp/Profile.jsx';
+import { IconHome, IconPhone, IconPlus, IconTicket, IconUsers } from '../components/icons.jsx';
 
 export default function CpApp() {
   const { user } = useAuth();
   const [screen, setScreen] = useState('dashboard');
+  // RM lives here (not in Dashboard) so the persistent strip's Call button and
+  // the Profile screen share one lookup. Fallback = the Openhouse desk number.
+  const [rmPhone, setRmPhone] = useState('+919555666059');
+  const [rmName, setRmName] = useState('Openhouse RM');
+
+  useEffect(() => {
+    let alive = true;
+    api.getMyRm()
+      .then((data) => {
+        const rm = data?.rm;
+        if (alive && rm?.phone) { setRmPhone(rm.phone); setRmName(rm.name || 'Openhouse RM'); }
+      })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
+
+  const goHome = () => setScreen('dashboard');
+
   return (
     <div className="app-shell-cp">
       {user?.impersonated_by && (
@@ -15,9 +36,41 @@ export default function CpApp() {
           <button className="btn-link" onClick={() => { clearSession(); window.location.assign('/'); }}>Exit</button>
         </div>
       )}
-      {screen === 'addUnit'
-        ? <AddUnit onDone={() => setScreen('dashboard')} />
-        : <Dashboard onAdd={() => setScreen('addUnit')} />}
+
+      {screen === 'addUnit' ? (
+        <AddUnit onDone={goHome} />
+      ) : screen === 'profile' ? (
+        <Profile onBack={goHome} rmPhone={rmPhone} rmName={rmName} />
+      ) : (
+        <Dashboard rmPhone={rmPhone} />
+      )}
+
+      {/* Persistent bottom strip — always visible: Home · Call · +Add · Messages(soon) · Profile */}
+      <nav className="cp-bottombar">
+        <button type="button" className={`cp-nav${screen === 'dashboard' ? ' active' : ''}`} onClick={goHome} title="Home">
+          <span className="cp-nav-ic"><IconHome size={22} /></span>
+          <span className="cp-nav-lbl">Home</span>
+        </button>
+
+        <a className="cp-nav" href={rmPhone ? `tel:${rmPhone.replace(/\D/g, '')}` : undefined} title={`Call ${rmName || 'your RM'}`}>
+          <span className="cp-nav-ic"><IconPhone size={22} /></span>
+          <span className="cp-nav-lbl">Call</span>
+        </a>
+
+        <button type="button" className="cp-nav-add" onClick={() => setScreen('addUnit')} title="Add Inventory" aria-label="Add Inventory">
+          <IconPlus size={28} />
+        </button>
+
+        <button type="button" className="cp-nav cp-nav-soon" disabled title="Messages — coming soon">
+          <span className="cp-nav-ic"><IconTicket size={22} /></span>
+          <span className="cp-nav-lbl">Messages</span>
+        </button>
+
+        <button type="button" className={`cp-nav${screen === 'profile' ? ' active' : ''}`} onClick={() => setScreen('profile')} title="Profile">
+          <span className="cp-nav-ic"><IconUsers size={22} /></span>
+          <span className="cp-nav-lbl">Profile</span>
+        </button>
+      </nav>
     </div>
   );
 }

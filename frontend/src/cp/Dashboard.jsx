@@ -59,15 +59,13 @@ function badgeLabel(s) {
   return stageLabel(s.status);
 }
 
-export default function Dashboard({ onAdd }) {
-  const { user, logout } = useAuth();
+export default function Dashboard({ rmPhone }) {
+  const { user } = useAuth();
   const [state, setState] = useState({
     loading: true,
     submissions: [],
     error: null,
   });
-  const [rmPhone, setRmPhone] = useState(null);
-  const [rmName, setRmName] = useState(null);
   const [filter, setFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [counterBusy, setCounterBusy] = useState({});
@@ -75,8 +73,7 @@ export default function Dashboard({ onAdd }) {
   const [expandedSubmission, setExpandedSubmission] = useState(null);
   const [mediaSubmission, setMediaSubmission] = useState(null);  // card "Upload Media"
   const [bookSubmission, setBookSubmission] = useState(null);    // card "Book Visit Slot"
-  // Confirmation dialogs for destructive actions
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  // Confirmation dialog for the reject-counter-offer action
   const [pendingRejectId, setPendingRejectId] = useState(null);  // submission id awaiting reject confirmation
 
   const loadSubmissions = () => {
@@ -97,29 +94,7 @@ export default function Dashboard({ onAdd }) {
   };
 
   useEffect(() => {
-    let alive = true;
     loadSubmissions();
-    // Resolve CP's assigned RM (via channel_partners.rm -> rms table).
-    // Falls back server-side to city-level RM / legacy cities.rm_phone.
-    api.getMyRm()
-      .then((data) => {
-        if (!alive) return;
-        const rm = data?.rm;
-        if (rm?.phone) {
-          setRmPhone(rm.phone);
-          setRmName(rm.name || 'Openhouse RM');
-        } else {
-          setRmPhone('+919555666059');
-          setRmName('Openhouse RM');
-        }
-      })
-      .catch(() => {
-        if (alive) {
-          setRmPhone('+919555666059');
-          setRmName('Openhouse RM');
-        }
-      });
-    return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user.city]);
 
@@ -183,47 +158,9 @@ export default function Dashboard({ onAdd }) {
 
   return (
     <div className="cp-shell">
-      {/* Header: name + CP code on left; city + logout top-right */}
+      {/* Header: just a greeting. Everything else moved to the bottom strip. */}
       <div className="header">
-        <div>
-          <div style={{ fontSize: 16, fontWeight: 700 }}>Hi, {user.name || 'there'}</div>
-          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 2 }}>
-            {user.cp_code} · {user.company || '—'}
-          </div>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
-          <div
-            style={{
-              fontSize: 11,
-              fontWeight: 600,
-              color: '#fff',
-              background: 'rgba(255,255,255,0.15)',
-              padding: '3px 10px',
-              borderRadius: 999,
-              letterSpacing: '0.3px',
-            }}
-          >
-            📍 {user.city || 'All'}
-          </div>
-          <button
-            onClick={() => setShowLogoutConfirm(true)}
-            title="Log out"
-            style={{
-              fontSize: 11,
-              fontWeight: 600,
-              color: '#fff',
-              background: 'rgba(255,255,255,0.12)',
-              border: '1px solid rgba(255,255,255,0.3)',
-              padding: '4px 12px',
-              borderRadius: 999,
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-              letterSpacing: '0.3px',
-            }}
-          >
-            Log out
-          </button>
-        </div>
+        <div style={{ fontSize: 18, fontWeight: 700 }}>Hi, {user.name || 'there'}</div>
       </div>
 
       {/* Filter chips: ALL / VISITED / OFFER / CLOSURE. */}
@@ -243,40 +180,12 @@ export default function Dashboard({ onAdd }) {
               key={box.key}
               type="button"
               onClick={() => setFilter(active && box.key !== 'All' ? 'All' : box.key)}
-              style={{
-                padding: '10px 6px',
-                borderRadius: 10,
-                border: `1.5px solid ${active ? box.color : 'var(--oh-border)'}`,
-                background: active ? box.color : '#fff',
-                color: active ? '#fff' : 'var(--oh-charcoal)',
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                minHeight: 64,
-                transition: 'all 0.15s',
-              }}
+              className={`cp-filter${active ? ' active' : ''}`}
             >
-              <div style={{
-                fontSize: 20,
-                fontWeight: 700,
-                color: active ? '#fff' : box.color,
-                lineHeight: 1,
-                marginBottom: 4,
-              }}>
+              <div className="cp-filter-count">
                 {count}
               </div>
-              <div style={{
-                fontSize: 10,
-                fontWeight: 600,
-                textTransform: 'uppercase',
-                letterSpacing: '0.3px',
-                textAlign: 'center',
-                lineHeight: 1.2,
-                opacity: active ? 0.95 : 0.7,
-              }}>
+              <div className="cp-filter-lbl">
                 {box.label}
               </div>
             </button>
@@ -482,24 +391,6 @@ export default function Dashboard({ onAdd }) {
         })
       )}
 
-      {/* Floating-action-button — restored from pre-revamp UI */}
-      <button className="register-btn" onClick={onAdd} title="Register your Inventory">
-        <span className="plus">+</span>
-        <span>Register your Inventory</span>
-      </button>
-
-      {/* Call RM — floating tel: shortcut, same position as the old WhatsApp FAB
-          (bottom-left). WhatsApp removed in P6 Task 1. */}
-      {rmPhone && (
-        <a
-          className="rm-call-fab"
-          href={`tel:${rmPhone.replace(/\D/g, '')}`}
-          title={`Call ${rmName || 'your RM'}`}
-        >
-          <span aria-hidden style={{ fontSize: 24, lineHeight: 1 }}>📞</span>
-        </a>
-      )}
-
       {expandedSubmission && (
         <SubmissionDetailModal
           submission={expandedSubmission}
@@ -525,18 +416,6 @@ export default function Dashboard({ onAdd }) {
           onBooked={loadSubmissions}
         />
       )}
-
-      {/* Logout confirmation */}
-      <ConfirmDialog
-        open={showLogoutConfirm}
-        title="Log out?"
-        message="You'll need to sign in again to view or add your listings."
-        confirmLabel="Log out"
-        cancelLabel="Cancel"
-        destructive
-        onConfirm={() => { setShowLogoutConfirm(false); logout(); }}
-        onCancel={() => setShowLogoutConfirm(false)}
-      />
 
       {/* Reject counter offer confirmation */}
       <ConfirmDialog
