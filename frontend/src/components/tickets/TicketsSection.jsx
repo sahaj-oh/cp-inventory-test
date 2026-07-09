@@ -83,7 +83,13 @@ export default function TicketsSection({ submissionId, publicId, canCreate }) {
 
   return (
     <>
-      <h4>🎫 Tickets</h4>
+      <div className="card-block">
+      <div className="card-head">
+        <h3>🎫 Tickets</h3>
+        {canCreate && !showCreate && (
+          <button type="button" className="btn-soft" onClick={() => setShowCreate(true)}>+ New Ticket</button>
+        )}
+      </div>
 
       {loading ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -120,8 +126,7 @@ export default function TicketsSection({ submissionId, publicId, canCreate }) {
         </>
       )}
 
-      {canCreate && (
-        showCreate ? (
+      {canCreate && showCreate && (
           <div className="tk-create" style={{ marginTop: 12 }}>
             <input
               className="tk-create-title"
@@ -147,12 +152,8 @@ export default function TicketsSection({ submissionId, publicId, canCreate }) {
               </button>
             </div>
           </div>
-        ) : (
-          <button type="button" className="btn-soft" style={{ marginTop: 12 }} onClick={() => setShowCreate(true)}>
-            + New Ticket
-          </button>
-        )
       )}
+      </div>
 
       <TicketModal
         id={openId}

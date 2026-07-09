@@ -22,7 +22,6 @@ import { thumbnailUrl, previewUrl } from '../../cloudinary';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 
 import UnitDetailsSection from './detail/UnitDetailsSection.jsx';
-import EditFieldsSection from './detail/EditFieldsSection.jsx';
 import PricingSection from './detail/PricingSection.jsx';
 import CounterOfferSection from './detail/CounterOfferSection.jsx';
 import PeopleSection from './detail/PeopleSection.jsx';
@@ -91,8 +90,8 @@ function ActivityTimeline({ s }) {
   const events = (s.events || []).filter((ev) => ev.kind !== 'comment');
 
   return (
-    <div className="expand-sec">
-      <h4>Activity ({events.length})</h4>
+    <div className="card-block">
+      <h3>Activity ({events.length})</h3>
       {events.length === 0 ? (
         <div className="muted" style={{ fontSize: 13 }}>No activity yet.</div>
       ) : (
@@ -156,38 +155,35 @@ function ActivityTimeline({ s }) {
   );
 }
 
-export default function SubmissionSections({ s, canAct, onChanged, onOpenCpHistory }) {
+export default function SubmissionSections({ s, canAct, onChanged, onOpenCpHistory, stacked }) {
   const { user } = useAuth();
   const role = user?.role;
   if (!s) return null;
+  // Order mirrors CP's DetailPanel, with two layout tweaks: Status + Visit
+  // Schedule share a side-by-side row, and Pricing + People merge into one
+  // "Pricing & People" card. `stacked` renders one clean column (the popup);
+  // otherwise the wide inline row flows them as masonry cards.
   return (
     <div>
       <Banners s={s} />
-      <div className="expand-inner">
-        <div className="expand-sec expand-sec-wide">
-          <UnitDetailsSection submission={s} canAct={canAct} onChanged={onChanged} />
-          <EditFieldsSection submission={s} canAct={canAct} onChanged={onChanged} />
-        </div>
-        <div className="expand-sec">
-          <PricingSection submission={s} canAct={canAct} onChanged={onChanged} />
-          <CounterOfferSection submission={s} canAct={canAct} onChanged={onChanged} />
-        </div>
-        <div className="expand-sec expand-sec-narrow">
-          <PeopleSection submission={s} canAct={canAct} onChanged={onChanged} onOpenCpHistory={onOpenCpHistory} />
-          <ReassignRmSection submission={s} canAct={canAct} onChanged={onChanged} />
-        </div>
-        <div className="expand-sec">
+      <div className={`expand-inner${stacked ? ' expand-stack' : ''}`}>
+        <div className="expand-pair">
           <StatusSection submission={s} canAct={canAct} onChanged={onChanged} />
           <ScheduleVisitSection submission={s} canAct={canAct} onChanged={onChanged} />
-          <NotesSection submission={s} canAct={canAct} onChanged={onChanged} />
         </div>
-        <div className="expand-sec">
-          <TicketsSection submissionId={s.id} publicId={s.public_id} canCreate={canAct && role !== 'rm'} />
+        <UnitDetailsSection submission={s} canAct={canAct} onChanged={onChanged} />
+        <div className="card-block">
+          <h3>Pricing &amp; People</h3>
+          <PricingSection submission={s} embedded />
+          <div className="pair-divider" />
+          <PeopleSection submission={s} onOpenCpHistory={onOpenCpHistory} embedded />
         </div>
-        <div className="expand-sec">
-          <MediaSection submission={s} canAct={canAct} onChanged={onChanged} />
-        </div>
+        <CounterOfferSection submission={s} canAct={canAct} onChanged={onChanged} />
+        <ReassignRmSection submission={s} canAct={canAct} onChanged={onChanged} />
+        <NotesSection submission={s} canAct={canAct} onChanged={onChanged} />
         <ActivityTimeline s={s} />
+        <TicketsSection submissionId={s.id} publicId={s.public_id} canCreate={canAct && role !== 'rm'} />
+        <MediaSection submission={s} canAct={canAct} onChanged={onChanged} />
       </div>
     </div>
   );

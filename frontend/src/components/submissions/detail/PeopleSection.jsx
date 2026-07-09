@@ -8,12 +8,10 @@
  *   onOpenCpHistory?: (cpId) => void — opens the CP's full submission
  *   history (same as CP's `onOpenCpHistory` DetailPanel prop).
  */
-export default function PeopleSection({ submission, canAct, onChanged, onOpenCpHistory }) {
+export default function PeopleSection({ submission, canAct, onChanged, onOpenCpHistory, embedded }) {
   if (!submission) return null;
   const s = submission;
-  return (
-    <div className="card-block">
-      <h3>People</h3>
+  const body = (
       <div className="field-grid-2">
         <div className="field-row">
           <div className="field-lbl">Channel partner</div>
@@ -54,6 +52,13 @@ export default function PeopleSection({ submission, canAct, onChanged, onOpenCpH
           </div>
         </div>
       </div>
+  );
+
+  if (embedded) return body;
+  return (
+    <div className="card-block">
+      <h3>People</h3>
+      {body}
     </div>
   );
 }

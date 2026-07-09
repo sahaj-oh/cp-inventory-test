@@ -10,7 +10,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api';
 import SubmissionSections from './SubmissionSections.jsx';
-import Loading from '../Loading.jsx';
+import SectionsSkeleton from './SectionsSkeleton.jsx';
 
 export default function ExpandPanel({ id, canAct, onChanged }) {
   const [data, setData] = useState(null); // null = loading
@@ -37,18 +37,12 @@ export default function ExpandPanel({ id, canAct, onChanged }) {
   if (error) {
     return (
       <div className="expand-inner">
-        <div className="expand-sec" style={{ color: 'var(--red-fg)' }}>{error}</div>
+        <div className="card-block" style={{ color: 'var(--red-fg)' }}>{error}</div>
       </div>
     );
   }
 
-  if (!data) {
-    return (
-      <div className="expand-inner">
-        <Loading />
-      </div>
-    );
-  }
+  if (!data) return <SectionsSkeleton />;
 
   return <SubmissionSections s={data} canAct={canAct} onChanged={handleChanged} />;
 }

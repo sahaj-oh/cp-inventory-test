@@ -384,6 +384,9 @@ export default function BoardView({
                       RM - {s.listing_rm_name || s.assigned_rm_name}
                     </div>
                   )}
+                  {s.cp_onboarded_by && (
+                    <div className="board-card-onboarded">Onboarded by {s.cp_onboarded_by}</div>
+                  )}
                 </div>
               );
             })}

@@ -12,6 +12,7 @@ import { api } from '../../api';
 import { stageMeta, stageLabel } from '../../format';
 import { IconClose } from '../icons.jsx';
 import SubmissionSections from './SubmissionSections.jsx';
+import SectionsSkeleton from './SectionsSkeleton.jsx';
 
 export default function CardDetailModal({ id, canAct, onClose }) {
   const [data, setData] = useState(null); // null = loading
@@ -60,13 +61,9 @@ export default function CardDetailModal({ id, canAct, onClose }) {
         {error ? (
           <div className="modal-error">{error}</div>
         ) : !data ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <div className="inv-skel" style={{ width: '60%' }} />
-            <div className="inv-skel" style={{ width: '90%' }} />
-            <div className="inv-skel" style={{ width: '75%' }} />
-          </div>
+          <SectionsSkeleton stacked />
         ) : (
-          <SubmissionSections s={data} canAct={canAct} onChanged={setData} />
+          <SubmissionSections s={data} canAct={canAct} onChanged={setData} stacked />
         )}
       </div>
     </div>
