@@ -136,7 +136,7 @@ export default function Login() {
             <OtpInput value={code} onChange={setCode} onComplete={() => handleVerifyOtp(code)} disabled={loading} />
 
             {devMode && (
-              <div className="login-hint muted">Dev mode: any 6 digits work (try <code>000000</code>)</div>
+              <div className="login-hint muted">Dev mode — enter <code>000000</code></div>
             )}
             {error && <div className="modal-error" style={{ marginTop: 10 }}>{error}</div>}
 

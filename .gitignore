@@ -3,6 +3,11 @@ backend/.env
 frontend/.env
 *.local
 
+# Local dev-only OTP bypass (never deployed). When these files are absent
+# (production) the imports fail softly and login stays strictly OTP-only.
+backend/local_bypass.py
+frontend/src/local_bypass.js
+
 # python
 backend/venv/
 **/__pycache__/
