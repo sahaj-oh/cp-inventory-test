@@ -1343,7 +1343,41 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 }
 .cp-nav:hover { color: var(--brand-strong); }
 .cp-nav.active { color: var(--brand); }
-.cp-nav-ic { display: flex; align-items: center; justify-content: center; line-height: 1; }
+.cp-nav-ic { position: relative; display: flex; align-items: center; justify-content: center; line-height: 1; }
+.cp-nav-badge {
+  position: absolute; top: -8px; left: 12px;
+  min-width: 18px; height: 18px; padding: 0 4px; box-sizing: border-box;
+  border-radius: 9px; background: var(--brand); color: #fff;
+  font-size: 10.5px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px solid var(--surface);
+}
+
+/* CP home header: logo flush-left, greeting to the right. */
+.cp-home-header { justify-content: space-between; }
+.cp-logo { height: 30px; width: auto; display: block; }
+.cp-greeting { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 700; color: var(--text); }
+
+/* CP detail bottom-sheet: slides up on open, down on close. */
+.cp-sheet-overlay {
+  position: fixed; inset: 0; background: rgba(15, 23, 42, 0.55); z-index: 1000;
+  display: flex; align-items: flex-end; justify-content: center;
+  backdrop-filter: blur(2px); animation: cp-overlay-in .2s ease;
+}
+.cp-sheet-overlay.closing { animation: cp-overlay-out .25s ease forwards; }
+.cp-sheet {
+  background: var(--surface); width: 100%; max-width: 560px; max-height: 60vh;
+  border-radius: 16px 16px 0 0; overflow: auto; display: flex; flex-direction: column;
+  animation: cp-sheet-up .28s cubic-bezier(.22, .61, .36, 1);
+}
+.cp-sheet.closing { animation: cp-sheet-down .25s ease forwards; }
+@keyframes cp-sheet-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes cp-sheet-down { from { transform: translateY(0); } to { transform: translateY(100%); } }
+@keyframes cp-overlay-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes cp-overlay-out { from { opacity: 1; } to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .cp-sheet, .cp-sheet.closing, .cp-sheet-overlay, .cp-sheet-overlay.closing { animation-duration: .01ms; }
+}
 .cp-nav-lbl { font-size: 10px; font-weight: 600; letter-spacing: .2px; }
 .cp-nav-soon { opacity: 0.38; cursor: default; }
 .cp-nav-soon:hover { color: var(--text-muted); }
@@ -1517,4 +1551,87 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 }
 @media (prefers-reduced-motion: reduce) {
   .welcome-curtain.in .wc-grad, .welcome-curtain.out .wc-grad, .welcome-curtain .wc-greeting { animation-duration: .5s; }
+}
+
+/* ── Chat (CometChat) ─────────────────────────────────────────────────── */
+/* Small helpers reused by the chat modals. */
+.form-field { margin-bottom: 14px; }
+.form-field label { display: block; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+.btn-xs { padding: 5px 11px; font-size: 12px; white-space: nowrap; }
+
+/* Admin Chat page — 2-pane inbox that fills the main content area
+   (Broadcast / Manage-users buttons live on the Layout topbar). */
+.chat-page { display: flex; flex-direction: column; min-height: 0; }
+.chat-inbox {
+  display: grid; grid-template-columns: minmax(0, 320px) 1fr;
+  height: calc(100vh - 116px); min-height: 420px;
+  border: 1px solid var(--border); border-radius: var(--r-lg);
+  overflow: hidden; background: var(--surface);
+}
+.chat-list { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--border); }
+.chat-pane { display: flex; flex-direction: column; min-height: 0; }
+.oh-chatlist { flex: 1; min-height: 0; overflow: hidden; }
+/* Hide CometChat's own list header so we don't get a duplicate title bar. */
+.oh-chatlist .cometchat-conversations__header,
+.oh-chatlist .cometchat-users__header { display: none !important; }
+
+/* Segmented tab control (Chats/Users, Live/History, broadcast mode). */
+.chat-seg { display: flex; gap: 6px; padding: 8px; border-bottom: 1px solid var(--border); }
+.chat-seg-end { justify-content: flex-end; }
+.chat-seg-btn {
+  flex: 1; padding: 6px 12px; border-radius: 7px; font-size: 12.5px; font-weight: 600;
+  cursor: pointer; font-family: inherit;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text-muted);
+}
+.chat-seg-end .chat-seg-btn { flex: 0 0 auto; }
+.chat-seg-btn.active { border-color: var(--brand); background: var(--brand-soft); color: var(--brand-strong); }
+
+/* Attributed history bubbles (our tokens, not CometChat's stream). */
+.chat-history { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.chat-msg { max-width: 72%; }
+.chat-msg-out { align-self: flex-end; text-align: right; }
+.chat-msg-in { align-self: flex-start; }
+.chat-msg-meta { font-size: 11px; color: var(--text-faint); margin-bottom: 3px; }
+.chat-msg-out .chat-msg-meta strong { color: var(--brand-strong); }
+.chat-msg-bubble { padding: 8px 12px; border-radius: 12px; font-size: 14px; line-height: 1.35; white-space: pre-wrap; word-break: break-word; display: inline-block; text-align: left; }
+.chat-msg-in .chat-msg-bubble { background: var(--surface-3); color: var(--text); }
+.chat-msg-out .chat-msg-bubble { background: var(--brand); color: #fff; }
+
+/* Composer (shared by CP Messages + admin live pane). */
+.chat-composer { border-top: 1px solid var(--border); background: var(--surface); }
+.chat-composer-err { padding: 6px 14px 0; color: var(--red-fg); font-size: 12px; }
+.chat-composer-row { display: flex; gap: 8px; padding: 12px; align-items: center; }
+.chat-composer-input { flex: 1; padding: 10px 14px; border: 1px solid var(--border); border-radius: 20px; font-size: 14px; font-family: inherit; outline: none; background: var(--surface); color: var(--text); }
+.chat-composer-input:focus { border-color: var(--brand); }
+.chat-composer-send { border-radius: 20px; padding: 0 20px; height: 40px; }
+
+/* CP Messages screen pane (header + list + composer stacked). */
+.cp-chat-pane { display: flex; flex-direction: column; height: calc(100dvh - 132px); }
+
+/* Broadcast / Manage modal bits. */
+.chat-result-banner { background: var(--green-bg); color: var(--green-fg); padding: 10px 12px; border-radius: var(--r-sm); font-size: 13px; margin-bottom: 14px; }
+.chat-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.chat-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: var(--surface-3); border: 1px solid var(--border); border-radius: 999px; font-size: 13px; }
+.chat-chip button { background: none; border: 0; cursor: pointer; color: var(--text-muted); font-size: 15px; line-height: 1; padding: 0; }
+.chat-search-list { margin: 8px 0 0; padding: 0; list-style: none; border: 1px solid var(--border); border-radius: var(--r-sm); overflow: hidden; max-height: 260px; overflow-y: auto; }
+.chat-search-row { display: flex; align-items: center; gap: 12px; padding: 9px 12px; border-bottom: 1px solid var(--hairline); cursor: pointer; }
+.chat-search-row:last-child { border-bottom: 0; }
+.chat-search-row:hover { background: var(--surface-2); }
+.chat-search-row-split { justify-content: space-between; cursor: default; }
+.chat-search-name { font-size: 14px; font-weight: 600; color: var(--text); }
+.chat-search-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.chat-access-badge { margin-left: 8px; font-size: 10.5px; font-weight: 700; }
+.chat-access-badge.on { color: var(--green-fg); }
+.chat-access-badge.off { color: var(--red-fg); }
+.chat-mgr-section { margin-bottom: 22px; }
+
+/* Best-effort: nudge CometChat UIKit accents toward our brand. */
+.chat-inbox, .cp-chat-pane {
+  --cometchat-primary-color: var(--brand);
+  --cometchat-brand-color: var(--brand);
+  --cometchat-primary-button-background: var(--brand);
+}
+
+@media (max-width: 640px) {
+  .chat-inbox { grid-template-columns: minmax(0, 140px) 1fr; }
 }

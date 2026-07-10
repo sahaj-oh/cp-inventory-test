@@ -326,7 +326,7 @@ export default function TableView({
                   <td>
                     <span
                       className={`status-pill ${isRejected ? 'is-rejected' : ''}`}
-                      style={{ background: stage.bg, color: stage.color }}
+                      style={{ background: stage.bg, color: stage.fg || stage.color }}
                     >
                       {stageLabel(s.status)}{s.status_reason ? ` (${s.status_reason})` : ''}
                     </span>

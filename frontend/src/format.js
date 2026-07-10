@@ -164,7 +164,7 @@ export function sanitizePhone(raw) {
 // triage scans visit-related queues before rebalancing pricing.
 // `label` (when set) is what the UI renders — `key` is the DB value.
 export const STAGES = [
-  { key: 'Unapproved',         color: '#B8860B', bg: '#FFF8E1', adminOnly: true },
+  { key: 'Unapproved',         color: '#ffd73b', bg: '#ffd73b', fg: '#1a1a1a', adminOnly: true },
   { key: 'Submitted',          color: '#6366F1', bg: '#EEF2FF' },
   { key: 'Visit Requested',    color: '#8b5cf6', bg: '#F5F3FF' },   // CP booked a slot; awaiting admin scheduling
   { key: 'Visit Scheduled',    color: '#D946EF', bg: '#FDF4FF' },

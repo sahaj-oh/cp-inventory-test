@@ -5,15 +5,16 @@ import { useAuth } from '../contexts/AuthContext.jsx';
 import { useTheme } from '../contexts/ThemeContext.jsx';
 import BusyOverlay from './BusyOverlay.jsx';
 import CreateTicketButton from './tickets/CreateTicketButton.jsx';
+import { useUnreadChat } from '../hooks/useUnreadChat';
 import {
   IconHome, IconBoard, IconEye, IconBuilding, IconTicket, IconLogs, IconUsers, IconProfile,
-  IconSun, IconMoon, IconMenu, IconLogout, IconChevron, IconPlus,
+  IconSun, IconMoon, IconMenu, IconLogout, IconChevron, IconPlus, IconChat, IconMegaphone,
 } from './icons.jsx';
 
 const TITLES = {
   '': 'Home', submissions: 'Submissions', impersonator: 'Impersonator',
   'oh-properties': 'OH Properties', tickets: 'Tickets', logs: 'Activity Logs',
-  users: 'Users', profile: 'My Profile',
+  users: 'Users', profile: 'My Profile', chat: 'Chat',
 };
 
 function initials(name, phone) {
@@ -37,6 +38,8 @@ export default function Layout() {
   const isManager = role === 'manager';
   const canTickets = role === 'admin' || role === 'manager' || role === 'rm';
   const canAct = canTickets; // admin/manager/rm can perform actions (adds on behalf, etc.)
+  // Number of CPs with unread chat — drives the count on the Chat nav icon.
+  const chatUnread = useUnreadChat({ people: true, enabled: isAdmin });
 
   // Poll "needs my action" ticket count for the nav dot (skip for roles with no
   // ticket access). 15s while visible; on focus; on local ticket mutations.
@@ -67,15 +70,15 @@ export default function Layout() {
     setCollapsed((c) => { const n = !c; localStorage.setItem('oh_sidebar_collapsed', n ? '1' : '0'); return n; });
   }
 
-  const navItem = ({ to, label, Icon, end, dot }) => {
-    const showDot = dot && ticketDot > 0;
+  const navItem = ({ to, label, Icon, end, count = 0 }) => {
+    const show = count > 0;
     return (
       <NavLink key={to} to={to} end={end}
         className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
         onClick={() => setMobileOpen(false)} title={collapsed ? label : undefined}>
-        <span className="nav-ic"><Icon />{showDot && <span className="nav-dot" />}</span>
+        <span className="nav-ic"><Icon />{show && <span className="nav-dot" />}</span>
         <span className="nav-label">{label}</span>
-        {showDot && <span className="nav-count">{ticketDot}</span>}
+        {show && <span className="nav-count">{count > 99 ? '99+' : count}</span>}
       </NavLink>
     );
   };
@@ -98,11 +101,12 @@ export default function Layout() {
         {navItem({ to: '/', label: 'Home', Icon: IconHome, end: true })}
         {navItem({ to: '/submissions', label: 'Submissions', Icon: IconBoard })}
         {navItem({ to: '/oh-properties', label: 'OH Properties', Icon: IconBuilding })}
-        {canTickets && navItem({ to: '/tickets', label: 'Tickets', Icon: IconTicket, dot: true })}
+        {canTickets && navItem({ to: '/tickets', label: 'Tickets', Icon: IconTicket, count: ticketDot })}
 
         {isAdmin && (
           <>
             <div className="sidebar-section-label">Admin</div>
+            {navItem({ to: '/chat', label: 'Chat', Icon: IconChat, count: chatUnread })}
             {navItem({ to: '/impersonator', label: 'Impersonator', Icon: IconEye })}
             {navItem({ to: '/users', label: 'Users', Icon: IconUsers })}
             {navItem({ to: '/logs', label: 'Logs', Icon: IconLogs })}
@@ -137,10 +141,25 @@ export default function Layout() {
               <IconPlus size={15} /> Add Inventory
             </button>
           )}
-          <button className="icon-btn" onClick={toggle} aria-label="Toggle theme">
-            {theme === 'dark' ? <IconSun /> : <IconMoon />}
-          </button>
-          <button className="icon-btn" onClick={logout} aria-label="Logout" title="Logout"><IconLogout /></button>
+          {seg === 'chat' && isAdmin && (
+            <>
+              <button type="button" className="btn-soft" onClick={() => window.dispatchEvent(new Event('chat:broadcast'))} title="Broadcast — mass message CPs">
+                <IconMegaphone size={15} /> Broadcast
+              </button>
+              <button type="button" className="btn-soft" onClick={() => window.dispatchEvent(new Event('chat:manage'))} title="Manage chat users">
+                <IconUsers size={15} /> Manage users
+              </button>
+            </>
+          )}
+          {/* Theme toggle + logout live only on the profile page. */}
+          {seg === 'profile' && (
+            <>
+              <button className="icon-btn" onClick={toggle} aria-label="Toggle theme">
+                {theme === 'dark' ? <IconSun /> : <IconMoon />}
+              </button>
+              <button className="icon-btn" onClick={logout} aria-label="Logout" title="Logout"><IconLogout /></button>
+            </>
+          )}
         </header>
         <main className="main"><Outlet /></main>
       </div>

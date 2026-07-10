@@ -5,7 +5,9 @@ import { clearSession } from '../auth';
 import Dashboard from '../cp/Dashboard.jsx';
 import AddUnit from '../cp/AddUnit/index.jsx';
 import Profile from '../cp/Profile.jsx';
+import Messages from '../cp/Messages.jsx';
 import { IconHome, IconPhone, IconPlus, IconTicket, IconUsers } from '../components/icons.jsx';
+import { useUnreadChat } from '../hooks/useUnreadChat';
 
 export default function CpApp() {
   const { user } = useAuth();
@@ -26,6 +28,7 @@ export default function CpApp() {
     return () => { alive = false; };
   }, []);
 
+  const unread = useUnreadChat();
   const goHome = () => setScreen('dashboard');
 
   return (
@@ -41,6 +44,8 @@ export default function CpApp() {
         <AddUnit onDone={goHome} />
       ) : screen === 'profile' ? (
         <Profile onBack={goHome} rmPhone={rmPhone} rmName={rmName} />
+      ) : screen === 'messages' ? (
+        <Messages onBack={goHome} />
       ) : (
         <Dashboard rmPhone={rmPhone} />
       )}
@@ -61,8 +66,13 @@ export default function CpApp() {
           <IconPlus size={28} />
         </button>
 
-        <button type="button" className="cp-nav cp-nav-soon" disabled title="Messages — coming soon">
-          <span className="cp-nav-ic"><IconTicket size={22} /></span>
+        <button type="button" className={`cp-nav${screen === 'messages' ? ' active' : ''}`} onClick={() => setScreen('messages')} title="Messages">
+          <span className="cp-nav-ic">
+            <IconTicket size={22} />
+            {unread > 0 && screen !== 'messages' && (
+              <span className="cp-nav-badge">{unread > 99 ? '99+' : unread}</span>
+            )}
+          </span>
           <span className="cp-nav-lbl">Messages</span>
         </button>
 

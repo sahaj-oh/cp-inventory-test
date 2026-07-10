@@ -55,7 +55,7 @@ export default function MediaVisitActions({
         {canBook && (
           <button
             type="button" className="primary-btn"
-            style={{ ...btnStyle, background: '#10B981', borderColor: '#10B981' }}
+            style={{ ...btnStyle, background: '#ffd73b', borderColor: '#ffd73b', color: '#1a1a1a' }}
             onClick={stop(onBookSlot)}
           >
             Book Visit Slot

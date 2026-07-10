@@ -13,6 +13,7 @@ const Logs = lazy(() => import('./pages/Logs.jsx'));
 const Users = lazy(() => import('./pages/Users.jsx'));
 const Tickets = lazy(() => import('./pages/Tickets.jsx'));
 const Profile = lazy(() => import('./pages/Profile.jsx'));
+const Chat = lazy(() => import('./pages/Chat.jsx'));
 
 const STAFF = ['admin', 'manager', 'rm', 'viewer'];
 
@@ -45,6 +46,7 @@ export default function App() {
           <Route path="/impersonator" element={<RequireRole user={user} roles={[]}><Impersonator /></RequireRole>} />
           <Route path="/users" element={<RequireRole user={user} roles={[]}><Users /></RequireRole>} />
           <Route path="/logs" element={<RequireRole user={user} roles={[]}><Logs /></RequireRole>} />
+          <Route path="/chat" element={<RequireRole user={user} roles={[]}><Chat /></RequireRole>} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

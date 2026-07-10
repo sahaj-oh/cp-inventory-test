@@ -113,6 +113,10 @@ export const api = {
 
   // Submissions (CP side)
   listSubmissions: () => request('/submissions'),
+  // Accurate per-stage counts over the CP's FULL history (the list caps at 100).
+  submissionsStats: () => request('/submissions/stats'),
+  // Search the CP's full submission history (server-side, past the 100 cap).
+  searchSubmissions: (q) => request(`/submissions/search?q=${encodeURIComponent(q)}`),
   createSubmission: (payload) =>
     request('/submissions', { method: 'POST', body: payload }),
   checkDuplicate: (payload) =>
@@ -287,6 +291,19 @@ export const api = {
   // Distinct values for the filter dropdowns. Computed over the whole table,
   // not the current filter set (same anti-narrowing rule as OH Properties).
   adminListActivityLogFacets: () => request('/admin/activity-log/facets'),
+
+  // Chat (CometChat) — backend provisions the CometChat user, mints login
+  // tokens, and proxies/logs sends. Paths mount under /api/comet.
+  getCometAuthToken: () => request('/comet/auth-token', { method: 'POST' }),
+  cometEnsureCpUser: (cpId) => request('/comet/ensure-user', { method: 'POST', body: { cp_id: cpId } }),
+  cometBroadcast: (payload) => request('/comet/broadcast', { method: 'POST', body: payload }),
+  cometRequestChat: () => request('/comet/request-chat', { method: 'POST' }),
+  cometSend: ({ cp_id = null, text }) => request('/comet/send', { method: 'POST', body: { cp_id, text } }),
+  cometHistory: (cpId) => request(`/comet/history?cp_id=${cpId}`),
+  cometListRequests: () => request('/comet/requests'),
+  cometAccessStatus: (cpIds) => request(`/comet/access?cp_ids=${cpIds.join(',')}`),
+  cometEnableCp: (cpId) => request('/comet/enable', { method: 'POST', body: { cp_id: cpId } }),
+  cometDisableCp: (cpId) => request('/comet/disable', { method: 'POST', body: { cp_id: cpId } }),
 
   // Health
   health: () => request('/health', { auth: false }),

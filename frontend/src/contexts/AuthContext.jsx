@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 
 import { api, ApiError } from '../api';
 import { clearSession, getUser, isImpersonating, setUser } from '../auth';
+import { logoutCometChat } from '../cometchat';
 
 const AuthContext = createContext(null);
 
@@ -136,6 +137,10 @@ export function AuthProvider({ children }) {
     // server-side cookie clear happens in the background (skipped in an
     // impersonation tab, where it would wipe the admin's shared cookie).
     runCurtain('out', user?.name);
+    // Tear down the CometChat session + cached login promise BEFORE clearing
+    // the portal session, so a logout→login in the same tab doesn't let the
+    // next user inherit this user's CometChat identity.
+    logoutCometChat().catch(() => {});
     setTimeout(() => {
       if (!isImpersonating()) api.logout().catch(() => {});
       clearSession();

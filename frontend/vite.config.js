@@ -16,7 +16,12 @@ export default defineConfig({
           { src: '/maskable-icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
-      workbox: { globPatterns: ['**/*.{js,css,html,ico,png,svg}'] },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        // The CometChat UIKit bundle is large (>2 MiB); raise the precache
+        // cap so the SW build doesn't drop it from the manifest.
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+      },
       // Dev SW disabled: a dev service worker precaches the app and serves
       // stale/broken content on reload (the "blank screen, stuck on Loading"
       // symptom). The SW still ships in production builds (autoUpdate).

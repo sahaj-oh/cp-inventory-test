@@ -12,6 +12,13 @@ import AgingStrip from './AgingStrip';
 import ShareMediaModal from './ShareMediaModal';
 import BookVisitModal from './BookVisitModal';
 import MediaVisitActions from './MediaVisitActions';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
+import { IconSearch } from '../components/icons.jsx';
+
+// Real DB stages the accurate-count endpoint reports on (mirror of the backend
+// VALID_STAGES); summed for the "ALL" box so the count reflects the CP's full
+// history, not just the 100 rows the list endpoint returns.
+const VALID_STAGES = ['Unapproved', 'Submitted', 'Visit Requested', 'Offer', 'Closure', 'Visit Scheduled', 'Visit Completed', 'Price Rejected', 'Rejected'];
 
 // Stats / filter boxes shown at the top. Clicking a box filters the list.
 // Note: 'Price Rejected' / 'Rejected' are intentionally NOT in the filter row
@@ -45,7 +52,7 @@ function badgeStyle(s) {
     return { background: '#FEE2E2', color: '#991B1B', border: '1px solid #FCA5A5' };
   }
   if (s.status === 'Unapproved') {
-    return { background: '#FFF8E1', color: '#B8860B', border: '1px solid #E8C86A' };
+    return { background: '#ffd73b', color: '#1a1a1a', border: '1px solid #ffd73b' };
   }
   if (s.status === 'Visit Requested') {
     return { background: '#F5F3FF', color: '#8b5cf6', border: '1px solid #C4B5FD' };
@@ -69,6 +76,12 @@ export default function Dashboard({ rmPhone }) {
   const [filter, setFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [counterBusy, setCounterBusy] = useState({});
+  // Accurate per-stage counts (full history) for the filter boxes, and
+  // server-side search results (past the 100-row list cap).
+  const [statCounts, setStatCounts] = useState(null);
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const debouncedQuery = useDebouncedValue(searchQuery, 300);
   // Submission opened in the full-detail modal (null = modal closed)
   const [expandedSubmission, setExpandedSubmission] = useState(null);
   const [mediaSubmission, setMediaSubmission] = useState(null);  // card "Upload Media"
@@ -78,6 +91,8 @@ export default function Dashboard({ rmPhone }) {
 
   const loadSubmissions = () => {
     setState((st) => ({ ...st, loading: true }));
+    // Accurate filter-box counts over the CP's full history (list caps at 100).
+    api.submissionsStats().then((d) => setStatCounts(d.stats || {})).catch(() => {});
     return api.listSubmissions().then((data) => {
       setState({
         loading: false,
@@ -112,33 +127,46 @@ export default function Dashboard({ rmPhone }) {
     return s.status;
   };
 
-  // Per-stage counts (used by the boxes and empty-state messaging)
+  // Filter-box counts: accurate totals from /submissions/stats (full history),
+  // falling back to the loaded set until the stats call lands.
   const counts = useMemo(() => {
+    if (statCounts) {
+      return {
+        All: VALID_STAGES.reduce((a, k) => a + (Number(statCounts[k]) || 0), 0),
+        Visited: Number(statCounts['Visit Completed']) || 0,
+        Offer: Number(statCounts['Offer']) || 0,
+        Closure: Number(statCounts['Closure']) || 0,
+      };
+    }
     const c = { All: state.submissions.length };
     for (const s of state.submissions) {
       const key = syntheticStatus(s);
       c[key] = (c[key] || 0) + 1;
     }
     return c;
-  }, [state.submissions]);
+  }, [statCounts, state.submissions]);
 
+  // Server-side search over the CP's FULL history (past the 100-row list cap),
+  // debounced. Empty query → clear results and fall back to the loaded list.
+  useEffect(() => {
+    const q = debouncedQuery.trim();
+    if (!q) { setSearchResults([]); setSearching(false); return undefined; }
+    let alive = true;
+    setSearching(true);
+    api.searchSubmissions(q)
+      .then((d) => { if (alive) setSearchResults(d.submissions || []); })
+      .catch(() => { if (alive) setSearchResults([]); })
+      .finally(() => { if (alive) setSearching(false); });
+    return () => { alive = false; };
+  }, [debouncedQuery]);
+
+  const searchActive = searchQuery.trim().length > 0;
   const visibleSubmissions = useMemo(() => {
-    // 1) Tab filter (ALL / VISITED / OFFER / CLOSURE) first.
-    const base = filter === 'All'
-      ? state.submissions
-      : state.submissions.filter((s) => syntheticStatus(s) === filter);
-    // 2) Search within that, same check as admin: lowercase + space-split, and
-    //    every token must hit one of the fields (multi-word AND across fields).
-    const tokens = searchQuery.toLowerCase().trim().split(/\s+/).filter(Boolean);
-    if (tokens.length === 0) return base;
-    return base.filter((s) => {
-      const hay = [
-        s.society_name, s.tower, s.unit_no, s.bhk, s.floor,
-        s.sqft, s.asking_price, s.public_id, s.status,
-      ].filter((v) => v != null).join(' ').toLowerCase();
-      return tokens.every((t) => hay.includes(t));
-    });
-  }, [state.submissions, filter, searchQuery]);
+    // When searching, the source is the server results (already matched across
+    // all data); otherwise the loaded list. The tab filter applies on top.
+    const source = searchActive ? searchResults : state.submissions;
+    return filter === 'All' ? source : source.filter((s) => syntheticStatus(s) === filter);
+  }, [searchActive, searchResults, state.submissions, filter]);
 
   const handleCounterResponse = async (submissionId, action) => {
     setCounterBusy((b) => ({ ...b, [submissionId]: action }));
@@ -158,9 +186,10 @@ export default function Dashboard({ rmPhone }) {
 
   return (
     <div className="cp-shell">
-      {/* Header: just a greeting. Everything else moved to the bottom strip. */}
-      <div className="header">
-        <div style={{ fontSize: 18, fontWeight: 700 }}>Hi, {user.name || 'there'}</div>
+      {/* Header: logo flush-left, greeting to the right. */}
+      <div className="header cp-home-header">
+        <img src="/openhouse-logo.png" alt="Openhouse" className="cp-logo" />
+        <div className="cp-greeting">Hi, {user.name || 'there'}</div>
       </div>
 
       {/* Filter chips: ALL / VISITED / OFFER / CLOSURE. */}
@@ -196,7 +225,7 @@ export default function Dashboard({ rmPhone }) {
       {/* Always-visible search bar with a magnifier to its left. */}
       <div style={{ padding: '8px 16px 4px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span aria-hidden style={{ fontSize: 16, opacity: 0.6, flexShrink: 0 }}>🔍</span>
+          <span aria-hidden style={{ display: 'flex', color: 'var(--text-faint)', flexShrink: 0 }}><IconSearch size={17} /></span>
           <input
             type="search"
             value={searchQuery}
@@ -209,10 +238,10 @@ export default function Dashboard({ rmPhone }) {
       </div>
 
       <div className="section-title">
-        {filter === 'All' ? 'Your Inventory' : `${FILTER_BOXES.find(b => b.key === filter)?.label || filter}`}
+        {searchActive ? 'Search results' : (filter === 'All' ? 'Your Inventory' : `${FILTER_BOXES.find(b => b.key === filter)?.label || filter}`)}
       </div>
 
-      {state.loading ? (
+      {(state.loading || (searchActive && searching && visibleSubmissions.length === 0)) ? (
         <>
           <UnitCardSkeleton />
           <UnitCardSkeleton />
@@ -224,11 +253,13 @@ export default function Dashboard({ rmPhone }) {
         </div>
       ) : visibleSubmissions.length === 0 ? (
         <div className="empty-state">
-          <div className="empty-state-icon">🏠</div>
+          <div className="empty-state-icon">{searchActive ? '🔍' : '🏠'}</div>
           <p>
-            {filter === 'All'
-              ? <>No units submitted yet.<br />Tap + to add your first unit.</>
-              : <>No units in this stage.</>}
+            {searchActive
+              ? <>No matches for “{searchQuery.trim()}”.</>
+              : filter === 'All'
+                ? <>No units submitted yet.<br />Tap + to add your first unit.</>
+                : <>No units in this stage.</>}
           </p>
         </div>
       ) : (

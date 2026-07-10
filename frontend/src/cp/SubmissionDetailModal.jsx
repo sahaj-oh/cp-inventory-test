@@ -17,6 +17,10 @@ import MediaVisitActions from './MediaVisitActions';
  */
 export default function SubmissionDetailModal({ submission, onClose }) {
   const s = submission;
+  // Play the slide-down exit before actually unmounting (keep in sync with the
+  // .cp-sheet.closing animation duration in styles.css).
+  const [closing, setClosing] = useState(false);
+  const close = () => { if (closing) return; setClosing(true); setTimeout(onClose, 250); };
   const [events, setEvents] = useState([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
   const [mediaOpen, setMediaOpen] = useState(false);
@@ -75,19 +79,12 @@ export default function SubmissionDetailModal({ submission, onClose }) {
   return (
     <>
     <div
-      onClick={onClose}
-      style={{
-        position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)',
-        zIndex: 1000, display: 'flex', alignItems: 'flex-end',
-        justifyContent: 'center', backdropFilter: 'blur(2px)',
-      }}
+      className={`cp-sheet-overlay${closing ? ' closing' : ''}`}
+      onClick={close}
     >
       <div
+        className={`cp-sheet${closing ? ' closing' : ''}`}
         onClick={(e) => e.stopPropagation()}
-        style={{
-          background: '#fff', width: '100%', maxWidth: 560, maxHeight: '60vh',
-          borderRadius: '16px 16px 0 0', overflow: 'auto', display: 'flex', flexDirection: 'column',
-        }}
       >
         {/* Header */}
         <div
@@ -111,7 +108,7 @@ export default function SubmissionDetailModal({ submission, onClose }) {
             )}
           </div>
           <button
-            onClick={onClose}
+            onClick={close}
             style={{
               background: 'none', border: 'none', fontSize: 24, color: 'var(--oh-gray)',
               cursor: 'pointer', padding: 4, lineHeight: 1,

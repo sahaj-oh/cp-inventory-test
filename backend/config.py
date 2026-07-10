@@ -90,6 +90,17 @@ class Config:
     CLOUDINARY_CLOUD_NAME = os.getenv("CLOUDINARY_CLOUD_NAME") or None
     CLOUDINARY_UPLOAD_PRESET = os.getenv("CLOUDINARY_UPLOAD_PRESET") or None
 
+    # -------- CometChat (in-app chat; replaces Interakt WhatsApp) --------
+    COMET_APP_ID = os.getenv("COMET_APP_ID") or None
+    COMET_REGION = os.getenv("COMET_REGION") or None
+    COMET_REST_API_KEY = os.getenv("COMET_REST_API_KEY") or None
+    COMET_AUTH_KEY = os.getenv("COMET_AUTH_KEY") or None
+    # Webhook uses HTTP Basic Auth (CometChat does NOT send a Bearer token).
+    COMET_WEBHOOK_USER = os.getenv("COMET_WEBHOOK_USER") or None
+    COMET_WEBHOOK_PASS = os.getenv("COMET_WEBHOOK_PASS") or None
+    # Shared staff identity all admins/RMs reply as.
+    COMET_STAFF_UID = os.getenv("COMET_STAFF_UID", "openhouse")
+
     @classmethod
     def validate(cls) -> None:
         missing = []
