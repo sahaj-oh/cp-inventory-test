@@ -6,8 +6,9 @@
  */
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext.jsx';
 import ConfirmDialog from '../components/ConfirmDialog';
-import { IconPhone, IconLogout, IconChevron } from '../components/icons.jsx';
+import { IconPhone, IconLogout, IconChevron, IconSun, IconMoon } from '../components/icons.jsx';
 
 function Row({ label, value }) {
   return (
@@ -20,6 +21,7 @@ function Row({ label, value }) {
 
 export default function Profile({ onBack, rmPhone, rmName }) {
   const { user, logout } = useAuth();
+  const { theme, toggle } = useTheme();
   const [showLogout, setShowLogout] = useState(false);
 
   const initials = (user.name || 'CP').trim().split(/\s+/).slice(0, 2)
@@ -34,6 +36,9 @@ export default function Profile({ onBack, rmPhone, rmName }) {
           <span style={{ display: 'inline-flex', transform: 'rotate(180deg)' }}><IconChevron size={20} /></span>
         </button>
         <div>Profile</div>
+        <button className="icon-btn" style={{ marginLeft: 'auto' }} onClick={toggle} aria-label="Toggle dark mode" title="Toggle dark mode">
+          {theme === 'dark' ? <IconSun /> : <IconMoon />}
+        </button>
       </div>
 
       <div className="prof-hero">

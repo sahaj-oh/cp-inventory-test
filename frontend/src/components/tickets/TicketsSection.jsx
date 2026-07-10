@@ -85,7 +85,7 @@ export default function TicketsSection({ submissionId, publicId, canCreate }) {
     <>
       <div className="card-block">
       <div className="card-head">
-        <h3>🎫 Tickets</h3>
+        <h3>Tickets</h3>
         {canCreate && !showCreate && (
           <button type="button" className="btn-soft" onClick={() => setShowCreate(true)}>+ New Ticket</button>
         )}

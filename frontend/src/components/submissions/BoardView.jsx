@@ -230,7 +230,7 @@ export default function BoardView({
                     {s.bhk && (
                       <span
                         className="board-chip"
-                        style={{ background: stage.bg, color: stage.fg || stage.color }}
+                        style={{ '--sb': stage.bg, '--sc': stage.fg || stage.color, '--sc2': stage.color }}
                       >
                         {formatBhk(s.bhk)}
                       </span>

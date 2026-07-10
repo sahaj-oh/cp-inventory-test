@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useTheme } from '../contexts/ThemeContext.jsx';
 import BusyOverlay from './BusyOverlay.jsx';
+import PageTransition from './PageTransition.jsx';
 import CreateTicketButton from './tickets/CreateTicketButton.jsx';
 import { useUnreadChat } from '../hooks/useUnreadChat';
 import {
@@ -131,6 +132,9 @@ export default function Layout() {
           <button className="icon-btn topbar-menu" onClick={() => setMobileOpen(true)} aria-label="Menu"><IconMenu /></button>
           <h1>{title}</h1>
           <div className="topbar-spacer" />
+          {/* Portal slot: pages inject their own topbar action buttons here so
+              they keep their live state (see Submissions' Select / CSV). */}
+          <div id="topbar-actions" className="topbar-actions" />
           {seg === 'tickets' && (isAdmin || isManager) && <CreateTicketButton />}
           {seg === 'submissions' && canAct && (
             <button
@@ -161,7 +165,7 @@ export default function Layout() {
             </>
           )}
         </header>
-        <main className="main"><Outlet /></main>
+        <main className="main"><PageTransition /></main>
       </div>
       <BusyOverlay />
     </div>

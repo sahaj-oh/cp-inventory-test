@@ -12,7 +12,9 @@ import {
   uploadToCloudinary, validateFile, thumbnailUrl, previewUrl, MAX_PHOTOS,
 } from '../../../cloudinary';
 
-export default function MediaSection({ submission, canAct, onChanged }) {
+// `only`: 'attachments' | 'media' — render just that block (the table-view
+// columns show them as separate columns). Default renders both.
+export default function MediaSection({ submission, canAct, onChanged, only }) {
   const [busy, setBusy] = useState(false);
   const [uploadingPct, setUploadingPct] = useState(null);
   const [lightboxId, setLightboxId] = useState(null);
@@ -79,6 +81,7 @@ export default function MediaSection({ submission, canAct, onChanged }) {
 
   return (
     <>
+      {only !== 'media' && (
       <div className="card-block">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <h3 style={{ marginBottom: 0 }}>Attachments</h3>
@@ -148,7 +151,9 @@ export default function MediaSection({ submission, canAct, onChanged }) {
           </div>
         )}
       </div>
+      )}
 
+      {only !== 'attachments' && (
       <div className="card-block">
         <h3>Uploaded media</h3>
         {hasMedia ? (
@@ -171,6 +176,7 @@ export default function MediaSection({ submission, canAct, onChanged }) {
           <div className="muted" style={{ fontSize: 13 }}>No media uploaded.</div>
         )}
       </div>
+      )}
 
       {lightboxId && (
         <div className="modal-backdrop" onClick={() => setLightboxId(null)}>

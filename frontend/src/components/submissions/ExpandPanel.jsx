@@ -42,7 +42,7 @@ export default function ExpandPanel({ id, canAct, onChanged }) {
     );
   }
 
-  if (!data) return <SectionsSkeleton />;
+  if (!data) return <SectionsSkeleton columns />;
 
-  return <SubmissionSections s={data} canAct={canAct} onChanged={handleChanged} />;
+  return <SubmissionSections s={data} canAct={canAct} onChanged={handleChanged} columns />;
 }

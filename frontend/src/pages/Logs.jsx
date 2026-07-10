@@ -309,10 +309,6 @@ export default function Logs() {
   return (
     <div>
       <div className="al-head">
-        <div>
-          <h2>Activity Logs</h2>
-          <div className="al-subtitle">Every mutation across the dashboard — status changes, reassignments, tickets, staff actions and more.</div>
-        </div>
         <div className="al-result-count">
           {loading
             ? <Loading />
@@ -356,7 +352,7 @@ export default function Logs() {
       </div>
 
       {data.cap_reached && (
-        <div className="al-banner">Showing first {HARD_CAP} results. Narrow filters for more specific results.</div>
+        <div className="al-banner">Showing first {HARD_CAP} results.</div>
       )}
 
       {error && (

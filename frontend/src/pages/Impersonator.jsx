@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { api } from '../api';
 import CpSelector from '../components/CpSelector.jsx';
+import { IconMobile, IconEye } from '../components/icons.jsx';
 
 export default function Impersonator() {
-  const [opened, setOpened] = useState(null);
+  const [embed, setEmbed] = useState(null); // { picked, token } — embedded CP view
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
 
@@ -12,22 +13,9 @@ export default function Impersonator() {
     setBusy(true);
     try {
       const { token } = await api.adminImpersonateCp(picked.id);
-      // Open the CP's app in a NEW TAB. A new tab is its own browsing context
-      // with isolated sessionStorage, so the CP impersonation token stays in
-      // that tab and never leaks into this admin session. (An iframe shares
-      // sessionStorage with this page, which would hijack the staff session —
-      // that was the earlier "impersonator doesn't work" bug.)
-      // NOTE: don't pass the 'noopener' feature — with it, window.open ALWAYS
-      // returns null, so the block-detection below would false-positive even
-      // when the tab opened fine. Instead open normally and null the opener
-      // ourselves for the same isolation.
-      const w = window.open(`/?impersonate=1#it=${encodeURIComponent(token)}`, '_blank');
-      if (w) {
-        try { w.opener = null; } catch { /* cross-origin guard — harmless */ }
-        setOpened(picked);
-      } else {
-        setError('Popup blocked — allow popups for this site, then pick the CP again.');
-      }
+      // Embedded, in-memory token only — never touches the shared sessionStorage,
+      // so this admin session stays intact (see auth.js). Actions are audited.
+      setEmbed({ picked, token });
     } catch (e) {
       setError(e?.data?.error || 'Could not start impersonation');
     } finally {
@@ -35,26 +23,58 @@ export default function Impersonator() {
     }
   }
 
+  function openNewTab() {
+    if (!embed) return;
+    const w = window.open(`/?impersonate=1#it=${encodeURIComponent(embed.token)}`, '_blank');
+    if (w) { try { w.opener = null; } catch { /* harmless */ } }
+  }
+
   return (
-    <div>
-      <div className="ph-sub muted" style={{ marginBottom: 14 }}>
-        Search a channel partner and open their app — exactly as they see it — in a new tab.
-        Every action there is audited to you.
-      </div>
-
-      {error && <div className="modal-error" style={{ marginBottom: 12 }}>{error}</div>}
-
-      {opened && (
-        <div className="card-block" style={{ marginBottom: 14, borderLeft: '3px solid var(--green)' }}>
-          👁 Opened <b>{opened.name}</b> · {opened.cp_code} · {opened.phone} in a new tab.
-          Pick another below to view a different CP.
+    <div className="imp-stage">
+      {/* Left: the always-on CP picker, then who you're viewing + exit beneath. */}
+      <aside className="imp-side imp-side-left">
+        <div className="card-block">
+          <div className="imp-picker-label">Pick a channel partner</div>
+          <CpSelector city="" onSelect={open} />
+          {busy && <div className="loading-inline">Starting<span className="loading-dots" aria-hidden="true" /></div>}
+          {error && <div className="modal-error" style={{ marginTop: 8 }}>{error}</div>}
         </div>
-      )}
+        {embed && (
+          <>
+            <div className="imp-identity card-block">
+              <div className="imp-identity-eye"><IconEye size={22} /></div>
+              <div className="imp-identity-label muted">Viewing as</div>
+              <div className="imp-identity-name">{embed.picked.name}</div>
+              <div className="imp-identity-meta muted">{embed.picked.cp_code}</div>
+              <div className="imp-identity-meta muted">{embed.picked.phone}</div>
+              <button type="button" className="btn-soft imp-exit" onClick={() => setEmbed(null)}>← Exit view</button>
+            </div>
+            <button type="button" className="btn-ghost imp-newtab" onClick={openNewTab}>Open in new tab</button>
+          </>
+        )}
+      </aside>
 
-      <div className="card-block" style={{ maxWidth: 640 }}>
-        <CpSelector city="" onSelect={open} />
-        {busy && <div className="loading-inline">Starting<span className="loading-dots" aria-hidden="true" /></div>}
+      {/* Center: the phone — always shown. */}
+      <div className="imp-frame-wrap">
+        {embed ? (
+          <iframe
+            key={embed.token}
+            title={`CP view — ${embed.picked.name}`}
+            src={`/?impersonate=1#it=${encodeURIComponent(embed.token)}`}
+            className="imp-frame"
+          />
+        ) : (
+          <div className="imp-frame-empty muted">
+            <span className="imp-frame-empty-icon"><IconMobile size={40} /></span>
+            Pick a channel partner to preview their app here.
+          </div>
+        )}
       </div>
+
+      {/* Right: resize hint. */}
+      <aside className="imp-side imp-side-right">
+        <div className="imp-frame-hint muted">Drag the bottom-right corner to resize the phone. Every action is audited to you.</div>
+      </aside>
     </div>
   );
 }

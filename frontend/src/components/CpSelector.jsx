@@ -81,9 +81,6 @@ export default function CpSelector({ onSelect, city = '' }) {
 
   return (
     <div>
-      <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6, fontWeight: 700 }}>
-        Pick CP
-      </div>
       <div style={{ position: 'relative' }}>
         <input
           ref={inputRef}

@@ -56,37 +56,37 @@
 }
 
 [data-theme='dark'] {
-  /* Brighter, more luminous orange so the brand pops on the dark surfaces. */
-  --brand: #ff6a3a;
-  --brand-strong: #ff8758;
-  --brand-soft: #3a1c10;
-  --brand-softer: #25140d;
-  --brand-ring: rgba(255, 106, 58, 0.32);
+  /* Hot-pink brand (replaces orange) on a neutral midnight-ink base. */
+  --brand: #fe1492;
+  --brand-strong: #ff5cb8;
+  --brand-soft: #35091f;
+  --brand-softer: #220613;
+  --brand-ring: rgba(254, 20, 146, 0.34);
 
-  /* Lighter, airier dark theme — lifted surfaces, brighter text + borders so
-     content reads as light-on-dark rather than murky. */
-  --bg: #17130f;
-  --bg-accent: #1e1813;
-  --surface: #251f1a;
-  --surface-2: #2d2620;
-  --surface-3: #372f28;
-  --sidebar-bg: #100c09;
-  --sidebar-fg: #d7cfc7;
-  --sidebar-fg-dim: #948a80;
+  /* Midnight Ink (#121212) base + white text; surfaces lifted a touch so cards
+     layer cleanly on the black. */
+  --bg: #121212;
+  --bg-accent: #181818;
+  --surface: #1c1c1c;
+  --surface-2: #242424;
+  --surface-3: #2e2e2e;
+  --sidebar-bg: #0c0c0c;
+  --sidebar-fg: #d8d8d8;
+  --sidebar-fg-dim: #8f8f8f;
   --sidebar-fg-strong: #ffffff;
   --sidebar-hover: rgba(255, 255, 255, 0.06);
-  --sidebar-active-bg: rgba(250, 84, 28, 0.22);
+  --sidebar-active-bg: rgba(254, 20, 146, 0.22);
   --sidebar-active-fg: #ffffff;
-  --sidebar-border: rgba(255, 255, 255, 0.07);
+  --sidebar-border: rgba(255, 255, 255, 0.08);
 
-  --text: #f8f5f2;
-  --text-2: #ddd5cd;
-  --text-muted: #aaa099;
-  --text-faint: #7c7269;
+  --text: #ffffff;
+  --text-2: #d8d8d8;
+  --text-muted: #a0a0a0;
+  --text-faint: #6f6f6f;
 
-  --border: #41382f;
-  --border-2: #342c25;
-  --hairline: #2c251f;
+  --border: #333333;
+  --border-2: #262626;
+  --hairline: #202020;
 
   --green: #34d399; --green-bg: #11271c; --green-fg: #46d68a;
   --amber: #fbbf24; --amber-bg: #2a1f0c; --amber-fg: #f5c054;
@@ -253,13 +253,26 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .topbar h1 { font-size: 21px; }
 .topbar .crumb { color: var(--text-muted); font-size: 13px; }
 .topbar-spacer { flex: 1; }
+/* Portal target for page-injected topbar action buttons; collapses when empty. */
+.topbar-actions { display: flex; align-items: center; gap: 8px; }
+.topbar-actions:empty { display: none; }
 .icon-btn {
   width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--border);
   background: var(--surface); color: var(--text-2); display: grid; place-items: center;
   font-size: 16px; transition: all .14s;
 }
 .icon-btn:hover { background: var(--surface-3); color: var(--text); }
-.main { flex: 1; overflow: auto; padding: 24px; }
+.main { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 24px; }
+/* Directional page transition: incoming page slides in from the side that
+   matches the sidebar hierarchy (down the list → from the right, up → left).
+   Animation lives ONLY on the directional classes (never the base .pt-page) so
+   a settled page carries no transform — a lingering transform would make this
+   a containing block that traps position:fixed modals inside the content area. */
+.pt-page.pt-fwd { animation: pt-in-fwd .3s cubic-bezier(.22, .61, .36, 1) both; }
+.pt-page.pt-back { animation: pt-in-back .3s cubic-bezier(.22, .61, .36, 1) both; }
+@keyframes pt-in-fwd { from { opacity: 0; transform: translateX(46px); } to { opacity: 1; transform: none; } }
+@keyframes pt-in-back { from { opacity: 0; transform: translateX(-46px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .pt-page.pt-fwd, .pt-page.pt-back { animation: none; } }
 .topbar-menu { display: none; }
 
 /* ── login ───────────────────────────────────────────────────────────── */
@@ -389,7 +402,10 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .city-tabs { display: inline-flex; gap: 4px; background: var(--surface-3); border: 1px solid var(--border); border-radius: var(--r-pill); padding: 3px; }
 .city-tabs .tab { border: 0; background: transparent; color: var(--text-2); font-weight: 600; font-size: 13px; padding: 7px 14px; border-radius: var(--r-pill); }
 .city-tabs .tab-active { background: var(--surface); color: var(--brand-strong); box-shadow: var(--shadow-sm); }
-.search-form { display: flex; gap: 8px; flex: 1; min-width: 260px; max-width: 520px; }
+/* flex:1 with no max cap → the search box fills the toolbar (elongated) and
+   follows the content width as the sidebar collapses/expands (the .app-shell
+   grid transition animates it smoothly). */
+.search-form { display: flex; gap: 8px; flex: 1; min-width: 260px; }
 .search-form input { flex: 1; min-width: 0; border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: var(--r-pill); padding: 9px 16px; outline: none; transition: border-color .14s, box-shadow .14s; }
 .search-form .btn-primary, .search-form .btn-ghost { border-radius: var(--r-pill); flex-shrink: 0; white-space: nowrap; }
 .al-filter-input { border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: var(--r-pill); padding: 9px 15px; outline: none; transition: border-color .14s, box-shadow .14s; }
@@ -402,7 +418,9 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .count-pill { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 92px; padding: 12px 14px; border-radius: var(--r); border: 1px solid var(--border); background: var(--surface); transition: all .14s; }
 .count-pill:hover { border-color: var(--brand); }
 .count-pill-active { border-color: var(--brand); background: var(--brand-softer); box-shadow: 0 0 0 3px var(--brand-ring); }
-.count-pill .num { font-family: 'Fraunces', serif; font-size: 24px; font-weight: 700; line-height: 1; }
+/* Explicit token color so the "All" pill's number (which has no inline stage
+   color) stays legible — it was the button default (near-black) in dark mode. */
+.count-pill .num { font-family: 'Fraunces', serif; font-size: 24px; font-weight: 700; line-height: 1; color: var(--text); }
 .count-pill .lbl { font-size: 10px; font-weight: 700; letter-spacing: .04em; color: var(--text-muted); }
 
 .filtered-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; font-size: 13px; }
@@ -569,6 +587,24 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 /* Popup variant: one clean CP-ordered column, no double padding/border
    (the modal supplies its own). */
 .expand-inner.expand-stack { column-width: auto; column-count: 1; padding: 0; border-top: 0; }
+
+/* Direct-style horizontal columns (table-view row expand): fixed-width columns
+   in a sideways-scrolling row — nothing clustered/compressed. Empty columns
+   (a section that rendered null, e.g. Counter Offer) collapse. */
+/* The scroll wrapper: width:1px keeps it from widening the table cell, while
+   min-width:100% + overflow-x makes ONLY this row scroll sideways. */
+.expand-scroll { width: 1px; min-width: 100%; overflow-x: auto; }
+.expand-inner.expand-cols {
+  display: flex; flex-wrap: nowrap; align-items: stretch; width: max-content;
+  column-width: auto; column-count: auto;   /* undo the base masonry */
+  gap: 0; padding: 0; border-top: 0;
+}
+.expand-col { flex: 0 0 300px; min-width: 300px; padding: 16px 18px; border-right: 1px solid var(--hairline); }
+.expand-col:empty { display: none; }
+.expand-col:last-child { border-right: 0; }
+/* Inside columns, sections are plain content — strip the nested-card chrome. */
+.expand-cols .card-block { background: transparent; border: 0; box-shadow: none; border-radius: 0; padding: 0; margin: 0 0 18px; }
+.expand-cols .card-block:last-child { margin-bottom: 0; }
 .expand-inner h4 { font-family: 'Inter', sans-serif; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--brand-strong); margin-bottom: 12px; display: flex; align-items: center; gap: 7px; }
 .field-row { display: flex; flex-direction: column; gap: 2px; margin-bottom: 11px; }
 .field-lbl { font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--text-faint); font-weight: 700; }
@@ -731,7 +767,7 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .board-card-meta { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
 
 .board-card-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-.board-chip { font-size: 10px; padding: 3px 8px; border-radius: 4px; font-weight: 600; letter-spacing: .2px; line-height: 1.5; }
+.board-chip { font-size: 10px; padding: 3px 8px; border-radius: 4px; font-weight: 600; letter-spacing: .2px; line-height: 1.5; background: var(--sb); color: var(--sc); }
 .board-chip-sqft { background: var(--surface-3); color: var(--text-2); }
 .board-chip-perfect { background: var(--red); color: #fff; }
 .board-chip-collated { background: var(--amber-bg); color: var(--amber-fg); border: 1px solid var(--amber); }
@@ -755,8 +791,16 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .board-card-skel::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent 0%, var(--surface-3) 50%, transparent 100%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }
 
 /* ── submissions: table status pill + row tint ───────────────────────── */
-.status-pill { display: inline-block; padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+.status-pill { display: inline-block; padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 600; white-space: nowrap; background: var(--sb); color: var(--sc); }
 .status-pill.is-rejected { background: var(--red-bg) !important; color: var(--red-fg) !important; font-weight: 700; }
+/* Stage pills carry their light bg (`--sb`) inline. In dark mode those light
+   backgrounds glare — replace them with a subtle tint of the saturated stage
+   color (`--sc2`) and use that color for the text (so stages like Unapproved,
+   whose light-mode text is near-black, stay legible). */
+[data-theme='dark'] .status-pill, [data-theme='dark'] .board-chip {
+  background: color-mix(in srgb, var(--sc2) 22%, transparent);
+  color: var(--sc2);
+}
 .inv-row.weak-match { background: var(--red-bg); }
 .inv-row.weak-match:hover { background: var(--red-bg); }
 
@@ -1574,6 +1618,11 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 /* Hide CometChat's own list header so we don't get a duplicate title bar. */
 .oh-chatlist .cometchat-conversations__header,
 .oh-chatlist .cometchat-users__header { display: none !important; }
+/* CP chat: strip CometChat's back arrow + search from the message header
+   (scoped to the CP pane — the admin inbox keeps them). */
+.cp-chat-pane .cometchat-message-header__back-button,
+.cp-chat-pane .cometchat-message-header__back-button-wrapper,
+.cp-chat-pane .cometchat-message-header__menu-button--search { display: none !important; }
 
 /* Segmented tab control (Chats/Users, Live/History, broadcast mode). */
 .chat-seg { display: flex; gap: 6px; padding: 8px; border-bottom: 1px solid var(--border); }
@@ -1635,3 +1684,33 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 @media (max-width: 640px) {
   .chat-inbox { grid-template-columns: minmax(0, 140px) 1fr; }
 }
+
+/* ── Impersonator embedded CP view ──────────────────────────────────── */
+/* Phone centered, info split into the panels on either side. */
+.imp-stage { display: flex; align-items: flex-start; justify-content: center; gap: 28px; flex-wrap: wrap; }
+.imp-side { flex: 1 1 210px; max-width: 280px; min-width: 190px; }
+/* Wider left column; both cards are full-width blocks → equal width, height
+   grows with content. */
+.imp-side-left { flex: 1 1 300px; max-width: 360px; }
+.imp-side-right { display: flex; flex-direction: column; gap: 10px; align-items: stretch; }
+.imp-identity { border-left: 3px solid var(--green); }
+.imp-identity-eye { display: inline-flex; color: var(--green); margin-bottom: 4px; }
+.imp-newtab { width: 100%; margin-top: 10px; }
+.imp-identity-label { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; margin-top: 8px; }
+.imp-identity-name { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 600; color: var(--text); margin-top: 2px; }
+.imp-identity-meta { font-size: 12.5px; margin-top: 3px; }
+.imp-frame-hint { font-size: 12px; margin-top: 4px; }
+/* resize:both lets the admin drag the bottom-right corner to resize the phone.
+   overflow:hidden is required for the resize grip; the iframe fills the box. */
+.imp-frame-wrap {
+  resize: both; overflow: hidden; flex: 0 0 auto;
+  /* Default phone size (portrait handset); user can drag to resize. */
+  width: 364px; height: 667px; min-width: 300px; min-height: 420px; max-width: 100%;
+  border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow-md);
+  background: var(--surface);
+}
+.imp-frame { width: 100%; height: 100%; border: 0; display: block; background: #fff; }
+.imp-exit { width: 100%; margin-top: 14px; }
+.imp-picker-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); margin-bottom: 10px; }
+.imp-frame-empty { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; padding: 24px; font-size: 13px; }
+.imp-frame-empty-icon { display: flex; opacity: .45; }

@@ -62,9 +62,11 @@ function Banners({ s }) {
       {s.unit_less && !s.perfect_match_at_submit && !s.deleted_at && (() => {
         const hasSubmissions = !!s.submissions_match;
         const hasCollated = !!s.collated_match;
-        const bg = hasSubmissions ? '#f5f3ff' : '#fffbeb';
-        const border = hasSubmissions ? '1px solid #c4b5fd' : '1px solid #fcd34d';
-        const color = hasSubmissions ? '#5b21b6' : '#78350f';
+        // Token pairs so the collated / submissions-match banner reads correctly
+        // in dark mode (was hardcoded light bg + dark text → glaring on black).
+        const bg = hasSubmissions ? 'var(--brand-soft)' : 'var(--amber-bg)';
+        const border = hasSubmissions ? '1px solid var(--brand-ring)' : '1px solid var(--amber)';
+        const color = hasSubmissions ? 'var(--brand-strong)' : 'var(--amber-fg)';
         let suffix;
         if (hasSubmissions && hasCollated) suffix = ' · matches both another CP submission and a 99acres listing';
         else if (hasSubmissions) suffix = ' · matches another CP submission';
@@ -155,10 +157,61 @@ function ActivityTimeline({ s }) {
   );
 }
 
-export default function SubmissionSections({ s, canAct, onChanged, onOpenCpHistory, stacked }) {
+export default function SubmissionSections({ s, canAct, onChanged, onOpenCpHistory, stacked, columns }) {
   const { user } = useAuth();
   const role = user?.role;
   if (!s) return null;
+
+  // Direct-style horizontal columns for the table-view row expand: one section
+  // (group) per column, the row scrolls sideways, nothing clustered. Empty
+  // columns (e.g. Counter Offer with no offer) collapse via `.expand-col:empty`.
+  if (columns) {
+    const canCreateTickets = canAct && role !== 'rm';
+    return (
+      <div>
+        <Banners s={s} />
+        {/* .expand-scroll (width:1px; min-width:100%) keeps the wide column row
+            scrolling WITHIN the table width instead of widening the whole table. */}
+        <div className="expand-scroll">
+        <div className="expand-inner expand-cols">
+          <div className="expand-col">
+            <StatusSection submission={s} canAct={canAct} onChanged={onChanged} />
+            <ScheduleVisitSection submission={s} canAct={canAct} onChanged={onChanged} />
+          </div>
+          <div className="expand-col">
+            <UnitDetailsSection submission={s} canAct={canAct} onChanged={onChanged} />
+          </div>
+          <div className="expand-col">
+            <PricingSection submission={s} canAct={canAct} onChanged={onChanged} />
+            <PeopleSection submission={s} onOpenCpHistory={onOpenCpHistory} />
+          </div>
+          <div className="expand-col">
+            <ReassignRmSection submission={s} canAct={canAct} onChanged={onChanged} />
+          </div>
+          <div className="expand-col">
+            <NotesSection submission={s} canAct={canAct} onChanged={onChanged} />
+          </div>
+          <div className="expand-col">
+            <TicketsSection submissionId={s.id} publicId={s.public_id} canCreate={canCreateTickets} />
+          </div>
+          <div className="expand-col">
+            <CounterOfferSection submission={s} canAct={canAct} onChanged={onChanged} />
+          </div>
+          <div className="expand-col">
+            <ActivityTimeline s={s} />
+          </div>
+          <div className="expand-col">
+            <MediaSection submission={s} canAct={canAct} onChanged={onChanged} only="attachments" />
+          </div>
+          <div className="expand-col">
+            <MediaSection submission={s} canAct={canAct} onChanged={onChanged} only="media" />
+          </div>
+        </div>
+        </div>
+      </div>
+    );
+  }
+
   // Order mirrors CP's DetailPanel, with two layout tweaks: Status + Visit
   // Schedule share a side-by-side row, and Pricing + People merge into one
   // "Pricing & People" card. `stacked` renders one clean column (the popup);

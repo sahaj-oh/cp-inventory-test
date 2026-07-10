@@ -161,8 +161,6 @@ export default function OhProperties() {
   }, [filters]);
 
   const totalPages = Math.max(1, Math.ceil(data.total / PAGE_SIZE));
-  const start = data.results.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
-  const end = (page - 1) * PAGE_SIZE + data.results.length;
 
   const onSort = (col) => {
     if (sortCol === col) {
@@ -192,9 +190,6 @@ export default function OhProperties() {
     <div>
       <div className="page-head">
         <h2>OH Properties</h2>
-        <div className="ph-sub muted">
-          {loading ? <Loading /> : `${data.total.toLocaleString()} rows · showing ${start}–${end}`}
-        </div>
       </div>
 
       <div className="toolbar">

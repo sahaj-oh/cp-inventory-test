@@ -6,7 +6,7 @@ import Dashboard from '../cp/Dashboard.jsx';
 import AddUnit from '../cp/AddUnit/index.jsx';
 import Profile from '../cp/Profile.jsx';
 import Messages from '../cp/Messages.jsx';
-import { IconHome, IconPhone, IconPlus, IconTicket, IconUsers } from '../components/icons.jsx';
+import { IconHome, IconPhone, IconPlus, IconChat, IconUsers } from '../components/icons.jsx';
 import { useUnreadChat } from '../hooks/useUnreadChat';
 
 export default function CpApp() {
@@ -33,7 +33,9 @@ export default function CpApp() {
 
   return (
     <div className="app-shell-cp">
-      {user?.impersonated_by && (
+      {/* Only show the impersonation banner in a standalone tab — when embedded
+          in the Impersonator's iframe the exit/identity live in that page. */}
+      {user?.impersonated_by && window.self === window.top && (
         <div className="imp-banner">
           👁 Viewing as {user.name} · impersonated by {user.impersonated_by.name || user.impersonated_by.cp_code}
           <button className="btn-link" onClick={() => { clearSession(); window.location.assign('/'); }}>Exit</button>
@@ -68,7 +70,7 @@ export default function CpApp() {
 
         <button type="button" className={`cp-nav${screen === 'messages' ? ' active' : ''}`} onClick={() => setScreen('messages')} title="Messages">
           <span className="cp-nav-ic">
-            <IconTicket size={22} />
+            <IconChat size={22} />
             {unread > 0 && screen !== 'messages' && (
               <span className="cp-nav-badge">{unread > 99 ? '99+' : unread}</span>
             )}

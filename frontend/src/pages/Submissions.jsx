@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
 
 import { api, downloadAdminCsv } from '../api';
@@ -97,6 +98,10 @@ export default function Submissions() {
 
   // Filter bar state. FilterModal (P3.4) will render the actual UI for these.
   const [showFilters, setShowFilters] = useState(false);
+  // Layout's topbar portal target — Select + Download CSV render into it so
+  // they sit on the top strip while keeping their live state here.
+  const [topbarSlot, setTopbarSlot] = useState(null);
+  useEffect(() => { setTopbarSlot(document.getElementById('topbar-actions')); }, []);
   const [bhk, setBhk] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
@@ -315,10 +320,9 @@ export default function Submissions() {
           <div className="muted">Showing {user.city} only</div>
         )}
 
-        {/* Submitting the form is the single trigger for "search now": fires
-            for both the keyboard Enter key and a click on the Search button.
-            type="search" hints mobile keyboards to render a Search key and
-            shows the native clear-X. */}
+        {/* Search elongates (flex:1, follows the sidebar) and pins to the right
+            next to Filters. Submitting the form is the single "search now"
+            trigger (Enter or the Search button). */}
         <form
           className="search-form"
           role="search"
@@ -334,7 +338,7 @@ export default function Submissions() {
             onChange={(e) => setSearchInput(e.target.value)}
             enterKeyHint="search"
           />
-          <button type="submit" className="btn-ghost" title="Search (Enter)">
+          <button type="submit" className="btn-primary" title="Search (Enter)">
             <IconSearch size={15} /> Search
           </button>
         </form>
@@ -348,37 +352,40 @@ export default function Submissions() {
           <IconFilter size={15} /> Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
         </button>
 
-        <div className="toolbar-spacer" />
-
+        {/* Board/Table toggle — last, after Filters. */}
         <div className="view-toggle" role="tablist">
           <button className={`vt-btn ${view === 'board' ? 'on' : ''}`} onClick={() => setView('board')}>Board</button>
           <button className={`vt-btn ${view === 'table' ? 'on' : ''}`} onClick={() => setView('table')}>Table</button>
         </div>
+      </div>
 
-        {canAct && (
+      {/* Select + Download CSV live on the top strip (Layout), portaled so they
+          keep their live labels (Cancel (n) / Exporting…). Add Inventory is
+          rendered by Layout for this page. */}
+      {topbarSlot && createPortal(
+        <>
+          {canAct && (
+            <button
+              type="button"
+              className={`btn-ghost${bulkMode ? ' btn-soft' : ''}`}
+              onClick={toggleBulkMode}
+              title="Select multiple to change status"
+            >
+              {bulkMode ? `Cancel${selectedIds.size > 0 ? ` (${selectedIds.size})` : ''}` : 'Select'}
+            </button>
+          )}
           <button
             type="button"
-            className={`btn-ghost${bulkMode ? ' btn-soft' : ''}`}
-            onClick={toggleBulkMode}
-            title="Select multiple to change status"
+            className="btn-ghost"
+            onClick={handleExport}
+            disabled={exporting || !counts.Total}
+            title="Download the current filtered result set as CSV"
           >
-            {bulkMode ? `Cancel${selectedIds.size > 0 ? ` (${selectedIds.size})` : ''}` : 'Select'}
+            <IconDownload size={15} /> {exporting ? 'Exporting…' : 'Download CSV'}
           </button>
-        )}
-
-        <button
-          type="button"
-          className="btn-ghost"
-          onClick={handleExport}
-          disabled={exporting || !counts.Total}
-          title="Download the current filtered result set as CSV"
-        >
-          <IconDownload size={15} /> {exporting ? 'Exporting…' : 'Download CSV'}
-        </button>
-
-        {/* "Add Inventory" lives in the topbar now (Layout) — it fires the
-            `submissions:add-inventory` event, handled below. */}
-      </div>
+        </>,
+        topbarSlot,
+      )}
 
       <FilterModal
         open={showFilters}
