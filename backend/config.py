@@ -46,10 +46,10 @@ class Config:
     KALEYRA_SENDER_ID = os.getenv("KALEYRA_SENDER_ID", "OHAVAN")
     KALEYRA_TEMPLATE_ID = os.getenv("KALEYRA_TEMPLATE_ID", "1107173502114302174")
     # Comma-separated list of phone numbers that accept `000000` as a universal bypass.
-    # Default includes the admin phone so testing works even without env setup.
+    # Empty by default — no phone bypasses OTP unless explicitly opted in via env.
     OTP_DEV_BYPASS_PHONES = [
         p.strip() for p in os.getenv(
-            "OTP_DEV_BYPASS_PHONES", "9555666059"
+            "OTP_DEV_BYPASS_PHONES", ""
         ).split(",") if p.strip()
     ]
     # OTP behavior
@@ -108,6 +108,11 @@ class Config:
             missing.append("DATABASE_URL")
         if not cls.JWT_SECRET or cls.JWT_SECRET == "change-me-to-a-48-char-random-string":
             missing.append("JWT_SECRET")
+        # If OTP is enabled, the SMS provider MUST be configured. Otherwise
+        # verify_otp falls open (any 6 digits log in any phone) — fail closed
+        # at startup instead of silently disabling authentication.
+        if cls.OTP_ENABLED and not cls.KALEYRA_API_KEY:
+            missing.append("KALEYRA_API_KEY (required when OTP_ENABLED=true)")
         if missing:
             raise RuntimeError(
                 f"Missing required environment variables: {', '.join(missing)}. "

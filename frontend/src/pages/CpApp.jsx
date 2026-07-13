@@ -13,8 +13,9 @@ export default function CpApp() {
   const { user } = useAuth();
   const [screen, setScreen] = useState('dashboard');
   // RM lives here (not in Dashboard) so the persistent strip's Call button and
-  // the Profile screen share one lookup. Fallback = the Openhouse desk number.
-  const [rmPhone, setRmPhone] = useState('+919555666059');
+  // the Profile screen share one lookup. No fallback number — the Call button
+  // stays inert (href undefined) until getMyRm resolves a real RM phone.
+  const [rmPhone, setRmPhone] = useState('');
   const [rmName, setRmName] = useState('Openhouse RM');
 
   useEffect(() => {

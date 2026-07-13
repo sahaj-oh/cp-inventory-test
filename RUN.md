@@ -25,7 +25,7 @@ npm run dev                             # → http://localhost:5173
 Open **http://localhost:5173**. The dev server proxies `/api/*` to the backend, so the session cookie is first-party.
 
 ## Logging in
-Login is phone + OTP. Use a phone that exists as a **staff** row (`rms`) or admin (`channel_partners`) in the DB to land on the staff dashboard; a CP phone lands on the (stub) CP flow. In local/dev the bypass phone **`9555666059`** accepts code **`000000`** (`OTP_DEV_BYPASS_PHONES` default). An unregistered phone shows the "contact your RM" screen.
+Login is phone + OTP. Use a phone that exists as a **staff** row (`rms`) or admin (`channel_partners`) in the DB to land on the staff dashboard; a CP phone lands on the (stub) CP flow. In local/dev, add a phone to `OTP_DEV_BYPASS_PHONES` (empty by default) to let it accept code **`000000`** without SMS. An unregistered phone shows the "contact your RM" screen.
 
 ## What works today
 - **Backend:** fully functional — all original APIs (frozen), WhatsApp removed, **Tickets** added (`/api/tickets/*`). Run tests: `cd backend && set -a && source ./.env && set +a && RUN_DB_TESTS=1 TEST_DATABASE_URL="$DATABASE_URL" ./venv/bin/pytest -q` (11 pass).

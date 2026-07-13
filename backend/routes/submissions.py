@@ -976,6 +976,10 @@ def book_visit(sid: int):
             if err:
                 body, status = err
                 return jsonify(body), status
+            # Don't resurrect a rejected listing (would wipe status_reason).
+            # Mirrors the guard on share_media.
+            if row["status"] in ("Rejected", "Price Rejected"):
+                return jsonify({"error": "Can't book a visit on a rejected listing"}), 409
 
             # If an rm_id was supplied, validate it's active and in the
             # submission's city. Savepoint so a missing rms table doesn't abort.
