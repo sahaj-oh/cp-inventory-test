@@ -39,7 +39,7 @@ def _make_optional_pool(label: str, dsn: str):
         # threads in services_email can share it with request threads safely.
         return pool.ThreadedConnectionPool(
             minconn=1,
-            maxconn=5,
+            maxconn=10,
             dsn=dsn,
             cursor_factory=RealDictCursor,
             keepalives=1,

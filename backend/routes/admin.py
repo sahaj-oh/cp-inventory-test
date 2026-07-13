@@ -1043,20 +1043,24 @@ def _stage_counts():
 @bp.get("/submissions")
 @require_staff
 def list_submissions():
-    # Auto-sync Visit Scheduled -> Visit Completed from properties.visit_submitted_at
-    # before returning the list, so the admin board reflects field-level updates
-    # without needing a separate Forms-app webhook. Best-effort; doesn't block
-    # the response on properties-side errors.
-    _sync_visit_completed_from_properties()
-    # Pull tower/unit_no/floor back from properties for any submission with a
-    # forms_uid — field execs register the actual unit details on-site and
-    # properties is the authoritative source after a visit. Always overwrites.
-    _sync_unit_details_from_properties()
-    # Sync submission status from the Forms-app cp_inventory_status table:
-    # valid_cp_id rows whose cp_id matches our public_id push their cp_status
-    # onto submissions.status. Runs last so the cp_status table has final say.
-    # Best-effort; skips terminal (rejected) cards.
-    _sync_status_from_cp_inventory()
+    # `skip_counts=true` is set by load-more / per-stage pagination requests. The
+    # board fans those out across every stage at once, and each one used to re-run
+    # all three cross-DB properties syncs below — a burst that drains the small
+    # props pool ("connection pool exhausted"). The primary board load (which
+    # computes counts) already reconciles EVERY matching submission, not just the
+    # visible page, so the extra rows a load-more fetches are already synced.
+    # Gate the syncs (and, as before, the counts) on that same flag.
+    skip_counts = request.args.get("skip_counts", "false").lower() == "true"
+    if not skip_counts:
+        # Auto-sync Visit Scheduled -> Visit Completed from properties.visit_submitted_at
+        # so the admin board reflects field-level updates without a Forms webhook.
+        _sync_visit_completed_from_properties()
+        # Pull tower/unit_no/floor back from properties for any submission with a
+        # forms_uid — properties is authoritative after a visit. Always overwrites.
+        _sync_unit_details_from_properties()
+        # Sync submission status from the Forms-app cp_inventory_status table
+        # (runs last so cp_status has final say). Best-effort; skips terminal cards.
+        _sync_status_from_cp_inventory()
 
     # Pagination: default 15 per stage, capped at 500 for safety. Frontend
     # passes `offset` only when paginating a single stage (status filter is
@@ -1078,10 +1082,8 @@ def list_submissions():
     # actually render. The side panel re-fetches the full row on click.
     subs = _list_submissions_core(slim=True, limit_per_stage=limit, offset=offset)
 
-    # `skip_counts=true` is set by load-more requests so we don't re-run the
-    # COUNT-per-stage aggregate every scroll trigger. Counts only need to
-    # change when filters change (handled by a fresh reload, not a load-more).
-    skip_counts = request.args.get("skip_counts", "false").lower() == "true"
+    # skip_counts (parsed above) also skips the COUNT-per-stage aggregate on
+    # load-more — counts only change when filters change (a fresh reload).
     counts = None if skip_counts else _stage_counts()
     payload = {"submissions": subs}
     if counts is not None:

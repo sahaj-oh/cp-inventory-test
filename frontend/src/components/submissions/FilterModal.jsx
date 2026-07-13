@@ -70,7 +70,7 @@ function presetRange(name) {
 }
 
 const EMPTY = {
-  bhk: '', statusFilter: '', rmIds: [],
+  bhk: '', statusFilter: [], rmIds: [],
   dateFrom: '', dateTo: '', datePreset: '',
   matchTypes: [], missingInfo: [], priceMin: '', priceMax: '', ohPrice: '',
   rejectReasons: [],
@@ -120,7 +120,12 @@ export default function FilterModal({
     setF((p) => ({ ...p, bhk: p.bhk === s ? '' : s }));
   }
   function toggleStage(key) {
-    setF((p) => ({ ...p, statusFilter: p.statusFilter === key ? '' : key }));
+    setF((p) => ({
+      ...p,
+      statusFilter: p.statusFilter.includes(key)
+        ? p.statusFilter.filter((k) => k !== key)
+        : [...p.statusFilter, key],
+    }));
   }
   function toggleInArray(key, arrKey) {
     setF((p) => ({
@@ -161,7 +166,7 @@ export default function FilterModal({
   }
 
   const visibleStages = STAGES.filter((s) => isStaff || isViewer || !s.adminOnly);
-  const showRejectReasons = f.statusFilter === 'Rejected';
+  const showRejectReasons = f.statusFilter.includes('Rejected');
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -187,7 +192,7 @@ export default function FilterModal({
             <label>Stage</label>
             <div className="bhk-pills">
               {visibleStages.map((s) => (
-                <button key={s.key} type="button" className={f.statusFilter === s.key ? 'pill pill-on' : 'pill'} onClick={() => toggleStage(s.key)}>
+                <button key={s.key} type="button" className={f.statusFilter.includes(s.key) ? 'pill pill-on' : 'pill'} onClick={() => toggleStage(s.key)}>
                   {s.label || s.key}
                 </button>
               ))}

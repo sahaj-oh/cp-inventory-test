@@ -55,7 +55,7 @@ export default function BoardView({
   bulkMode = false, selectedIds = new Set(), onToggleSelect,
   isStaff = false,
   isViewer = false,
-  statusFilter = '',
+  statusFilter = [],
   counts = {},
   loadedByStage = {},
   loadingByStage = {},
@@ -82,7 +82,7 @@ export default function BoardView({
   // stage independently and refill the board, defeating the filter.
   const visibleStages = STAGES
     .filter((s) => isStaff || isViewer || !s.adminOnly)
-    .filter((s) => !statusFilter || s.key === statusFilter);
+    .filter((s) => statusFilter.length === 0 || statusFilter.includes(s.key));
 
   if (loading) {
     return (

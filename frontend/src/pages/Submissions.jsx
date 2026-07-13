@@ -107,7 +107,15 @@ export default function Submissions() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [rmFilter, setRmFilter] = useState(''); // '' = All RMs
-  const [statusFilter, setStatusFilter] = useState(() => searchParams.get('status') || ''); // '' = All
+  // Multi-select stage filter: an array of stage keys (client-side union).
+  // [] = All. Deep-links may pass a comma list (?status=Unapproved,Submitted).
+  const [statusFilter, setStatusFilter] = useState(() => {
+    const s = searchParams.get('status');
+    return s ? s.split(',').filter(Boolean) : [];
+  });
+  const toggleStatus = (key) => setStatusFilter((prev) => (
+    prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+  ));
 
   // Client-only refinements (FilterModal, P3.4) — CP's admin API has no
   // server params for these, so they post-filter the already-loaded rows
@@ -145,8 +153,12 @@ export default function Submissions() {
   // after every server reload/load-more, over whatever's currently in
   // `submissions` — cheap, since it's at most a few hundred rows in memory.
   const clientFilteredSubmissions = useMemo(() => {
-    if (clientFilterCount === 0) return submissions;
+    const statusSet = statusFilter.length > 0 ? new Set(statusFilter) : null;
+    if (clientFilterCount === 0 && !statusSet) return submissions;
     return submissions.filter((s) => {
+      // Stage filter is client-side now (multi-select union) — the backend
+      // `status` param only takes a single stage, so we post-filter instead.
+      if (statusSet && !statusSet.has(s.status)) return false;
       if (matchTypes.length > 0) {
         const flags = {
           perfect: s.perfect_match_at_submit === true,
@@ -173,15 +185,13 @@ export default function Submissions() {
       if (rejectReasons.length > 0 && !rejectReasons.includes(s.status_reason)) return false;
       return true;
     });
-  }, [submissions, clientFilterCount, matchTypes, missingInfo, priceMin, priceMax, ohPriceFilter, rejectReasons]);
+  }, [submissions, statusFilter, clientFilterCount, matchTypes, missingInfo, priceMin, priceMax, ohPriceFilter, rejectReasons]);
 
-  // The board already loads every stage's first page, so filtering to a stage
-  // there is meant to be a pure client-side column collapse (BoardView, P3.3)
-  // — no reason to re-hit the server. The table is a flat paginated list, so
-  // it still needs the server-side `status` filter. Hence `status` only
-  // reaches the wire in table view.
-  const serverStatus = view === 'table' ? statusFilter : '';
-
+  // The stage filter is client-side for BOTH views now (multi-select union) —
+  // reload always fetches every stage's first page and `clientFilteredSubmissions`
+  // post-filters to the selected stages. `status` never reaches the wire (the
+  // backend only accepts a single stage anyway); per-stage load-more still uses
+  // it, keyed by the specific stage being paginated.
   const effectiveFilters = useMemo(() => {
     const f = {};
     if (city && city !== 'All') f.city = city;
@@ -190,9 +200,8 @@ export default function Submissions() {
     if (dateFrom) f.date_from = dateFrom;
     if (dateTo) f.date_to = dateTo;
     if (rmFilter) f.rm_id = rmFilter;
-    if (serverStatus) f.status = serverStatus;
     return f;
-  }, [city, search, bhk, dateFrom, dateTo, rmFilter, serverStatus]);
+  }, [city, search, bhk, dateFrom, dateTo, rmFilter]);
 
   const reload = useCallback(async () => {
     const myGen = ++reloadGen.current;
@@ -372,15 +381,17 @@ export default function Submissions() {
               {bulkMode ? `Cancel${selectedIds.size > 0 ? ` (${selectedIds.size})` : ''}` : 'Select'}
             </button>
           )}
-          <button
-            type="button"
-            className="btn-ghost"
-            onClick={handleExport}
-            disabled={exporting || !counts.Total}
-            title="Download the current filtered result set as CSV"
-          >
-            <IconDownload size={15} /> {exporting ? 'Exporting…' : 'Download CSV'}
-          </button>
+          {isAdmin && (
+            <button
+              type="button"
+              className="btn-ghost"
+              onClick={handleExport}
+              disabled={exporting || !counts.Total}
+              title="Download the current filtered result set as CSV"
+            >
+              <IconDownload size={15} /> {exporting ? 'Exporting…' : 'Download CSV'}
+            </button>
+          )}
         </>,
         topbarSlot,
       )}
@@ -419,27 +430,27 @@ export default function Submissions() {
         />
       )}
 
-      {/* Stage count pills — clickable as a status filter. Table view narrows
-          to one stage server-side; board view (P3.3) collapses to that
-          column client-side. */}
+      {/* Stage count pills — multi-select status filter. Click stages to union
+          them (Unapproved + Submitted shows both); "All" clears the selection.
+          Filtering is client-side for both views. */}
       <div className="stage-counts">
         <div className="stage-pills">
           <button
             type="button"
-            className={`count-pill${statusFilter === '' ? ' count-pill-active' : ''}`}
-            onClick={() => setStatusFilter('')}
+            className={`count-pill${statusFilter.length === 0 ? ' count-pill-active' : ''}`}
+            onClick={() => setStatusFilter([])}
           >
             <span className="num">{counts.Total ?? 0}</span>
             <span className="lbl">All</span>
           </button>
           {STAGES.filter((s) => isStaff || isViewer || !s.adminOnly).map((s) => {
-            const active = statusFilter === s.key;
+            const active = statusFilter.includes(s.key);
             return (
               <button
                 key={s.key}
                 type="button"
                 className={`count-pill${active ? ' count-pill-active' : ''}`}
-                onClick={() => setStatusFilter(active ? '' : s.key)}
+                onClick={() => toggleStatus(s.key)}
               >
                 <span className="num" style={{ color: s.color }}>{counts[s.key] ?? 0}</span>
                 <span className="lbl">{s.label || s.key}</span>

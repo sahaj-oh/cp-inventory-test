@@ -18,16 +18,10 @@ import Loading from '../Loading.jsx';
 import { IconCalendar } from '../icons.jsx';
 
 /**
- * Bottom-of-table infinite-scroll sentinel. Two modes:
- *
- *   - Filtered (statusFilter set): paginates that single stage. `hasMore`
- *     and `loading` come straight from `hasMoreByStage[statusFilter]` /
- *     `loadingByStage[statusFilter]`; `onVisible` fires
- *     `onLoadMore(statusFilter)`.
- *
- *   - Unfiltered: the table mixes every stage. The backend paginates per
- *     stage, so when the sentinel fires we fan out and call
- *     `onLoadMore(stage)` for every stage that still has more rows.
+ * Bottom-of-table infinite-scroll sentinel. The stage filter is a client-side
+ * multi-select now, so the backend still paginates per stage: when the sentinel
+ * fires we fan out `onLoadMore(stage)` across the selected stages (or every
+ * stage with more rows when nothing is selected).
  */
 function TableLoadMoreSentinel({ hasMore, loading, onVisible }) {
   const ref = useRef(null);
@@ -87,7 +81,7 @@ export default function TableView({
   counts = {}, loadedByStage = {}, loadingByStage = {}, onLoadMore,
   canAct = false,
   bulkMode = false, selectedIds = new Set(), onToggleSelect, onToggleAll,
-  statusFilter = '',
+  statusFilter = [],
   onOpenSubmission,
 }) {
   // { key, dir }  dir = 'asc' | 'desc'. Default: newest submissions first.
@@ -381,16 +375,11 @@ export default function TableView({
         </tbody>
       </table>
 
-      {/* Infinite scroll. Filtered → paginate the one selected stage.
-          Unfiltered → fan out across every stage that still has rows. */}
-      {statusFilter ? (
-        <TableLoadMoreSentinel
-          hasMore={!!hasMoreByStage[statusFilter]}
-          loading={!!loadingByStage[statusFilter]}
-          onVisible={() => onLoadMore?.(statusFilter)}
-        />
-      ) : (() => {
-        const stagesWithMore = Object.keys(hasMoreByStage).filter((k) => hasMoreByStage[k]);
+      {/* Infinite scroll. Paginate the selected stages (multi-select), or fan
+          out across every stage that still has rows when nothing is selected. */}
+      {(() => {
+        const candidates = statusFilter.length > 0 ? statusFilter : Object.keys(hasMoreByStage);
+        const stagesWithMore = candidates.filter((k) => hasMoreByStage[k]);
         const anyLoading = stagesWithMore.some((k) => loadingByStage[k]);
         return (
           <TableLoadMoreSentinel
