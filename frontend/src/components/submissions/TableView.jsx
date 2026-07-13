@@ -15,6 +15,7 @@ import {
 import MatchDetailsModal from '../MatchDetailsModal.jsx';
 import ExpandPanel from './ExpandPanel.jsx';
 import Loading from '../Loading.jsx';
+import { IconCalendar } from '../icons.jsx';
 
 /**
  * Bottom-of-table infinite-scroll sentinel. Two modes:
@@ -87,6 +88,7 @@ export default function TableView({
   canAct = false,
   bulkMode = false, selectedIds = new Set(), onToggleSelect, onToggleAll,
   statusFilter = '',
+  onOpenSubmission,
 }) {
   // { key, dir }  dir = 'asc' | 'desc'. Default: newest submissions first.
   const [sort, setSort] = useState({ key: 'submitted', dir: 'desc' });
@@ -148,10 +150,10 @@ export default function TableView({
     }
   }, [merged, sort]);
 
-  if (loading) {
-    return <div className="admin-table-loading"><Loading label="Loading submissions" /></div>;
-  }
-  if (!merged || merged.length === 0) {
+  // Empty state only when NOT loading — during the initial load we fall through
+  // to the table shell + skeleton rows (in the tbody below) instead of swapping
+  // in a blank spinner, so the table shimmers in place of a whole-page reload.
+  if (!loading && (!merged || merged.length === 0)) {
     return <div className="admin-table-loading">No submissions match.</div>;
   }
 
@@ -204,6 +206,16 @@ export default function TableView({
           </tr>
         </thead>
         <tbody>
+          {/* Initial load: keep the table (header + rows) and shimmer the data
+              in — so it never pops in as a whole blank→full swap. */}
+          {loading && rows.length === 0 && Array.from({ length: 8 }).map((_, i) => (
+            <tr key={`sk-${i}`} className="inv-row inv-row-skel">
+              {bulkMode && <td className="inv-td-sel"><span className="inv-skel" style={{ width: 16, height: 16 }} /></td>}
+              {['62%', '82%', '46%', '54%', '50%', '60%', '48%', '72%', '58%', '52%'].map((w, c) => (
+                <td key={c}><span className="inv-skel" style={{ width: w }} /></td>
+              ))}
+            </tr>
+          ))}
           {rows.map((s) => {
             const stage = stageMeta(s.status);
             const isWeakMatch = s.weak_match === true;
@@ -220,15 +232,13 @@ export default function TableView({
             //   2. Submissions match (incl. both)   → purple (another CP — stronger signal)
             //   3. Collated match                   → yellow
             //   4. Withdrawn / unit-less unapproved → yellow
-            const rowStyle = isPerfectMatch
-              ? { background: '#fef2f2' }
-              : isSubmissionsPartial
-                ? { background: '#f5f3ff' }
-                : isCollatedPartial
-                  ? { background: '#fffbeb' }
-                  : (isWithdrawn || (isUnitLess && s.status === 'Unapproved'))
-                    ? { background: '#fffbeb' }
-                    : undefined;
+            // Row tint → a theme-aware class (was inline light hex, which glared
+            // in dark mode). Light: soft tint; dark: faint hue of the same colour.
+            const matchClass = isPerfectMatch ? 'match-perfect'
+              : isSubmissionsPartial ? 'match-submissions'
+                : isCollatedPartial ? 'match-collated'
+                  : (isWithdrawn || (isUnitLess && s.status === 'Unapproved')) ? 'match-collated'
+                    : '';
             const handleClick = () => {
               if (bulkMode) onToggleSelect?.(s.id);
               else setOpenId(isOpen ? null : s.id);
@@ -236,8 +246,7 @@ export default function TableView({
             return (
               <Fragment key={s.id}>
                 <tr
-                  className={`inv-row ${isOpen ? 'inv-row-open' : ''} ${isWeakMatch ? 'weak-match' : ''} ${isChecked ? 'inv-row-selected' : ''}`}
-                  style={rowStyle}
+                  className={`inv-row ${matchClass} ${isOpen ? 'inv-row-open' : ''} ${isWeakMatch ? 'weak-match' : ''} ${isChecked ? 'inv-row-selected' : ''}`}
                   onClick={handleClick}
                   title={isWeakMatch ? 'Weak society match during import — verify' : undefined}
                 >
@@ -278,7 +287,7 @@ export default function TableView({
                         fontSize: 9, fontWeight: 700, color: '#065F46',
                         background: '#ECFDF5', borderRadius: 3, letterSpacing: 0.3,
                       }} title={`Visit scheduled · ${formatDateOnly(s.scheduled_date)} ${formatTime12(s.scheduled_time)} · ${s.field_exec_name || ''} · UID ${s.forms_uid}`}>
-                        📅 {s.forms_uid}
+                        <IconCalendar size={10} style={{ verticalAlign: '-1px', marginRight: 3 }} />{s.forms_uid}
                       </span>
                     )}
                   </td>
@@ -324,45 +333,45 @@ export default function TableView({
                     )}
                   </td>
                   <td>
-                    <span
-                      className={`status-pill ${isRejected ? 'is-rejected' : ''}`}
-                      style={{ '--sb': stage.bg, '--sc': stage.fg || stage.color, '--sc2': stage.color }}
-                    >
-                      {stageLabel(s.status)}{s.status_reason ? ` (${s.status_reason})` : ''}
-                    </span>
-                    {isCollatedPartial && (
+                    {/* Flex-wrap + gap so the status pill and match flags get
+                        breathing room and drop to the next line instead of
+                        clustering. Match flags reuse the theme-aware board-chip
+                        classes (were inline light hex → broken in dark). */}
+                    <div className="status-cell">
                       <span
-                        title="Partial match from external inventory — click to see the matched listing(s)"
-                        onClick={(e) => { e.stopPropagation(); setMatchModalItems(s.match_details || []); }}
-                        style={{
-                          marginLeft: 6, padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 600,
-                          background: '#FEF3C7', color: '#92400E', border: '1px solid #FCD34D',
-                          whiteSpace: 'nowrap', cursor: 'pointer',
-                        }}
+                        className={`status-pill ${isRejected ? 'is-rejected' : ''}`}
+                        style={{ '--sb': stage.bg, '--sc': stage.fg || stage.color, '--sc2': stage.color }}
                       >
-                        Collated match
+                        {stageLabel(s.status)}{s.status_reason ? ` (${s.status_reason})` : ''}
                       </span>
-                    )}
-                    {isSubmissionsPartial && (
-                      <span
-                        title="Partial match from another CP's submission — click to see the matched record(s)"
-                        onClick={(e) => { e.stopPropagation(); setMatchModalItems(s.match_details || []); }}
-                        style={{
-                          marginLeft: 6, padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 600,
-                          background: '#EDE9FE', color: '#5B21B6', border: '1px solid #C4B5FD',
-                          whiteSpace: 'nowrap', cursor: 'pointer',
-                        }}
-                      >
-                        Submissions match
-                      </span>
-                    )}
+                      {isCollatedPartial && (
+                        <span
+                          className="board-chip board-chip-collated"
+                          style={{ cursor: 'pointer' }}
+                          title="Partial match from external inventory — click to see the matched listing(s)"
+                          onClick={(e) => { e.stopPropagation(); setMatchModalItems(s.match_details || []); }}
+                        >
+                          Collated match
+                        </span>
+                      )}
+                      {isSubmissionsPartial && (
+                        <span
+                          className="board-chip board-chip-submissions"
+                          style={{ cursor: 'pointer' }}
+                          title="Partial match from another CP's submission — click to see the matched record(s)"
+                          onClick={(e) => { e.stopPropagation(); setMatchModalItems(s.match_details || []); }}
+                        >
+                          Submissions match
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td style={{ color: 'var(--text-muted)' }}>{timeAgo(s.submitted_at)}</td>
                 </tr>
                 {isOpen && !bulkMode && (
                   <tr className="expand-row">
                     <td colSpan={colCount}>
-                      <ExpandPanel id={s.id} canAct={canAct} onChanged={patchRow} />
+                      <ExpandPanel id={s.id} canAct={canAct} onChanged={patchRow} onOpenSubmission={onOpenSubmission} />
                     </td>
                   </tr>
                 )}
@@ -396,7 +405,7 @@ export default function TableView({
       open={matchModalItems !== null}
       items={matchModalItems || []}
       onClose={() => setMatchModalItems(null)}
-      onOpenSubmission={(id) => setOpenId(id)}
+      onOpenSubmission={onOpenSubmission}
       title="Matched records"
     />
     </>

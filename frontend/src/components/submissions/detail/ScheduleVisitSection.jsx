@@ -16,6 +16,7 @@
  * when the row already has a forms_uid OR the caller can act (`canAct`).
  */
 import { useEffect, useState } from 'react';
+import { IconCalendar } from '../../icons.jsx';
 import { api, ApiError } from '../../../api';
 import {
   formatDateOnly, formatTime12, todayInIST, nowTimeIST, VISIT_TIME_SLOTS,
@@ -218,7 +219,7 @@ export default function ScheduleVisitSection({ submission, canAct, onChanged }) 
         className="btn-primary"
         style={{ width: '100%', justifyContent: 'center', padding: '12px 16px' }}
       >
-        📅 Schedule Visit
+        <IconCalendar size={15} /> Schedule Visit
       </button>
 
       {toast && (
@@ -301,7 +302,7 @@ export default function ScheduleVisitSection({ submission, canAct, onChanged }) 
               <div>
                 <label>Field Exec <span className="req">*</span></label>
                 {loadingExecs ? (
-                  <div className="muted" style={{ fontSize: 13, padding: '8px 0' }}><span className="loading-dots" aria-label="Loading" /></div>
+                  <div style={{ padding: '8px 0' }}><span className="inv-skel" style={{ display: 'inline-block', width: 140, height: 12 }} /></div>
                 ) : fieldExecs.length === 0 ? (
                   <div style={{ fontSize: 13, color: 'var(--red-fg)' }}>
                     No field execs available. Add users with can_visit=true in the properties DB.

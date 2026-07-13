@@ -27,6 +27,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ApiError, api } from '../api';
 import { formatDateTime, formatPrice } from '../format';
 import Loading from '../components/Loading.jsx';
+import CardDetailModal from '../components/submissions/CardDetailModal.jsx';
+import { IconCalendar } from '../components/icons.jsx';
 
 const PAGE_SIZE = 100;
 const HARD_CAP = 500;
@@ -121,9 +123,9 @@ function Details({ row }) {
 
     // ── visits ──
     case 'visit_scheduled':
-      return <>📅 Visit scheduled {d.schedule_date} {d.schedule_time} with {d.field_exec_name}</>;
+      return <><IconCalendar size={13} style={{ verticalAlign: '-2px', marginRight: 4 }} />Visit scheduled {d.schedule_date} {d.schedule_time} with {d.field_exec_name}</>;
     case 'visit_scheduled_bulk':
-      return <>📅 Bulk visit scheduled · {d.n_scheduled ?? 0} scheduled, {d.n_already_scheduled ?? 0} already set</>;
+      return <><IconCalendar size={13} style={{ verticalAlign: '-2px', marginRight: 4 }} />Bulk visit scheduled · {d.n_scheduled ?? 0} scheduled, {d.n_already_scheduled ?? 0} already set</>;
     case 'cp_visit_requested':
       return <>🙋 CP requested a visit · {d.date} {d.slot}{d.rm_name ? ` · ${d.rm_name}` : ''}</>;
 
@@ -200,6 +202,7 @@ export default function Logs() {
   // useDebouncedValue without needing a dedicated hook file.
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
+  const [propId, setPropId] = useState(null); // submission whose detail popup is open
   useEffect(() => {
     const t = setTimeout(() => setSearch(searchInput), 300);
     return () => clearTimeout(t);
@@ -372,11 +375,13 @@ export default function Logs() {
             </tr>
           </thead>
           <tbody>
-            {loading && sortedRows.length === 0 && (
-              <tr>
-                <td className="al-empty" colSpan={6}><Loading /></td>
+            {loading && sortedRows.length === 0 && Array.from({ length: 10 }).map((_, i) => (
+              <tr key={`sk-${i}`} className="inv-row-skel">
+                {Array.from({ length: 6 }).map((_, c) => (
+                  <td key={c}><span className="inv-skel" style={{ width: `${50 + (c * 11) % 40}%` }} /></td>
+                ))}
               </tr>
-            )}
+            ))}
             {sortedRows.length === 0 && !loading && (
               <tr>
                 <td className="al-empty" colSpan={6}>No activity matches these filters.</td>
@@ -387,13 +392,11 @@ export default function Logs() {
                 <td className="al-ts">{formatDateTime(r.created_at)}</td>
                 <td className="al-uid">
                   {r.entity_uid
-                    ? r.entity_uid.startsWith('OHL')
-                      // TODO: link UID → submission detail. CardDetailModal only
-                      // takes the numeric submission id, and log rows only carry
-                      // entity_uid (public_id) — needs a lookup-by-public_id
-                      // endpoint before this can open the modal directly.
-                      ? <em>{r.entity_uid}</em>
-                      : r.entity_uid
+                    ? (r.entity_type === 'submission' && r.entity_id
+                      // Log rows carry the numeric entity_id, so a submission UID
+                      // opens its detail popup directly (CardDetailModal by id).
+                      ? <button type="button" className="btn-link al-uid-link" onClick={() => setPropId(r.entity_id)}>{r.entity_uid}</button>
+                      : r.entity_uid)
                     : <span className="muted">—</span>}
                 </td>
                 <td>
@@ -430,6 +433,8 @@ export default function Logs() {
           >Next ›</button>
         </div>
       )}
+
+      {propId && <CardDetailModal id={propId} canAct onClose={() => setPropId(null)} />}
     </div>
   );
 }

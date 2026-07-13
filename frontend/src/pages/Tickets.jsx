@@ -20,7 +20,6 @@ import { formatDateTime, timeAgo } from '../format';
 import { ticketBadge } from '../components/tickets/ticketStatus.js';
 import TicketModal from '../components/tickets/TicketModal.jsx';
 import { IconTicket } from '../components/icons.jsx';
-import Loading from '../components/Loading.jsx';
 
 const TABS = [
   { key: 'action', label: 'Needs my action' },
@@ -102,7 +101,6 @@ export default function Tickets() {
     <div>
       <div className="page-head">
         <h2>Tickets</h2>
-        <div className="ph-sub muted">{loading ? <Loading /> : `${total} ticket${total === 1 ? '' : 's'}`}</div>
       </div>
 
       <div className="toolbar">
@@ -118,13 +116,16 @@ export default function Tickets() {
             </button>
           ))}
         </div>
+        <div className="muted" style={{ marginLeft: 'auto', fontSize: 13, fontWeight: 600 }}>
+          {total} ticket{total === 1 ? '' : 's'}
+        </div>
       </div>
 
       {error && <div className="modal-error" style={{ marginBottom: 16 }}>{error}</div>}
 
       {loading ? (
         <div className="tk-list">
-          {Array.from({ length: 4 }).map((_, i) => (
+          {Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="tk-card card-block tk-card-skel" />
           ))}
         </div>
@@ -171,7 +172,7 @@ export default function Tickets() {
           {items.length < total && (
             <div style={{ display: 'flex', justifyContent: 'center', marginTop: 12 }}>
               <button type="button" className="btn-ghost" onClick={loadMore} disabled={loadingMore}>
-                {loadingMore ? <span className="loading-dots" aria-label="Loading" /> : `Load more (${items.length} of ${total})`}
+                {loadingMore ? 'Loading…' : `Load more (${items.length} of ${total})`}
               </button>
             </div>
           )}

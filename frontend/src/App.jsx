@@ -46,7 +46,7 @@ export default function App() {
           <Route path="/impersonator" element={<RequireRole user={user} roles={[]}><Impersonator /></RequireRole>} />
           <Route path="/users" element={<RequireRole user={user} roles={[]}><Users /></RequireRole>} />
           <Route path="/logs" element={<RequireRole user={user} roles={[]}><Logs /></RequireRole>} />
-          <Route path="/chat" element={<RequireRole user={user} roles={[]}><Chat /></RequireRole>} />
+          <Route path="/chat" element={<RequireRole user={user} roles={['manager', 'rm']}><Chat /></RequireRole>} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

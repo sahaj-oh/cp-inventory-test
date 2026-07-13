@@ -451,6 +451,7 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .inv-th-arrow-active { color: var(--brand); }
 .inv-row { border-bottom: 1px solid var(--hairline); transition: background .1s; cursor: pointer; }
 .inv-row:hover { background: var(--surface-2); }
+.inv-row-skel, .inv-row-skel:hover { cursor: default; background: transparent; }
 .inv-row td { padding: 11px 12px; vertical-align: middle; color: var(--text-2); }
 .inv-row-open { background: var(--brand-softer); }
 .inv-row-priority { box-shadow: inset 3px 0 0 var(--yellow); }
@@ -669,6 +670,9 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .modal-backdrop { position: fixed; inset: 0; background: rgba(20,16,14,0.5); backdrop-filter: blur(2px); display: grid; place-items: start center; padding: 48px 16px; z-index: 1000; overflow: auto; }
 .modal { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-lg); width: 100%; max-width: 480px; padding: 24px; }
 .modal-wide { max-width: 720px; }
+
+/* Locked "picked CP" card in the on-behalf Add Inventory popup. */
+.obh-cp-card { display: flex; align-items: center; gap: 16px; padding: 14px 16px; background: var(--brand-softer); border: 1px solid var(--brand-ring); border-radius: var(--r); }
 .modal h3 { font-size: 19px; margin-bottom: 4px; }
 .modal-sub { color: var(--text-muted); font-size: 13px; margin: 0 0 16px; }
 .modal-actions { display: flex; gap: 10px; align-items: center; margin-top: 20px; }
@@ -732,6 +736,20 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .data-table td { padding: 11px 12px; border-bottom: 1px solid var(--hairline); color: var(--text-2); }
 .data-table tr:hover td { background: var(--surface-2); }
 .usr-inactive { opacity: .5; }
+/* Toast — bottom-center transient notification (e.g. after a force-logout). */
+.toast {
+  position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); z-index: 2000;
+  background: var(--text); color: var(--surface);
+  padding: 11px 20px; border-radius: 999px; font-size: 13.5px; font-weight: 600;
+  box-shadow: var(--shadow-lg); animation: toast-in .28s cubic-bezier(.22, .61, .36, 1);
+}
+.toast-err { background: var(--red); color: #fff; }
+@keyframes toast-in { from { opacity: 0; transform: translate(-50%, 12px); } to { opacity: 1; transform: translate(-50%, 0); } }
+/* View-transition reorder (a deactivated row sliding to the bottom): quick + smooth. */
+::view-transition-group(*) { animation-duration: .34s; animation-timing-function: cubic-bezier(.22, .61, .36, 1); }
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
+}
 .role-select { width: auto; padding: 6px 10px; }
 .btn-edit { background: var(--surface-3); border: 1px solid var(--border); border-radius: 7px; padding: 5px 11px; font-size: 12.5px; font-weight: 600; color: var(--text-2); }
 .btn-edit:hover { border-color: var(--brand); color: var(--brand-strong); }
@@ -774,6 +792,31 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .board-chip-submissions { background: rgba(139,92,246,.14); color: var(--purple); border: 1px solid rgba(139,92,246,.4); }
 .board-chip-moved { background: #DBEAFE; color: #1E40AF; border: 1px solid #93C5FD; }
 .board-chip-weak { background: var(--red-bg); color: var(--red-fg); border: 1px solid var(--red); }
+/* Match-summary chip rendered as a real <button> in the table-expand Status
+   column — reset button chrome, allow long society names to wrap. */
+.match-prop-btn { cursor: pointer; font-family: inherit; text-align: left; white-space: normal; word-break: break-word; }
+
+/* Match-type card overlay (board card). Light: soft tint + coloured border.
+   Dark: black card (var(--surface)) + just the coloured border — the light tint
+   glared and washed out the light text on black. Colours: perfect=red,
+   submissions=purple, collated=yellow, moved=blue. */
+.card-match-perfect     { background: #fef2f2; border: 1.5px solid #f87171; }
+.card-match-submissions { background: #f5f3ff; border: 1.5px solid #c4b5fd; }
+.card-match-collated    { background: #fffbeb; border: 1.5px solid #fcd34d; }
+.card-match-moved       { background: #eff6ff; border: 1.5px solid #93c5fd; }
+[data-theme='dark'] .card-match-perfect     { background: var(--surface); border-color: var(--red); }
+[data-theme='dark'] .card-match-submissions { background: var(--surface); border-color: var(--purple); }
+[data-theme='dark'] .card-match-collated    { background: var(--surface); border-color: var(--amber); }
+[data-theme='dark'] .card-match-moved       { background: var(--surface); border-color: #93c5fd; }
+
+/* Match-type row tint (table). Light: soft tint; dark: faint hue of the same
+   colour over the dark row (a light box would glare). */
+.inv-row.match-perfect     { background: #fef2f2; }
+.inv-row.match-submissions { background: #f5f3ff; }
+.inv-row.match-collated    { background: #fffbeb; }
+[data-theme='dark'] .inv-row.match-perfect     { background: color-mix(in srgb, var(--red) 12%, transparent); }
+[data-theme='dark'] .inv-row.match-submissions { background: color-mix(in srgb, var(--purple) 12%, transparent); }
+[data-theme='dark'] .inv-row.match-collated    { background: color-mix(in srgb, var(--amber) 12%, transparent); }
 
 .board-card-schedule { margin-top: 10px; padding: 6px 10px; background: var(--green-bg); border: 1px solid var(--green); border-radius: 8px; font-size: 11px; font-weight: 600; color: var(--green-fg); line-height: 1.4; }
 .board-card-divider { margin-top: 12px; border-top: 1px solid var(--hairline); }
@@ -791,15 +834,27 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .board-card-skel::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent 0%, var(--surface-3) 50%, transparent 100%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }
 
 /* ── submissions: table status pill + row tint ───────────────────────── */
+/* Status column: pill + match flags flow with a gap and wrap instead of
+   clustering when the column is narrow. */
+.status-cell { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .status-pill { display: inline-block; padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 600; white-space: nowrap; background: var(--sb); color: var(--sc); }
 .status-pill.is-rejected { background: var(--red-bg) !important; color: var(--red-fg) !important; font-weight: 700; }
 /* Stage pills carry their light bg (`--sb`) inline. In dark mode those light
-   backgrounds glare — replace them with a subtle tint of the saturated stage
-   color (`--sc2`) and use that color for the text (so stages like Unapproved,
-   whose light-mode text is near-black, stay legible). */
-[data-theme='dark'] .status-pill, [data-theme='dark'] .board-chip {
-  background: color-mix(in srgb, var(--sc2) 22%, transparent);
+   backgrounds glare — give every stage-coloured badge the same treatment as the
+   collated-match chip: a dark tinted fill, the saturated stage colour (`--sc2`)
+   for text, and a matching coloured border. Excludes the chips that already own
+   a bespoke look (sqft/perfect/collated/submissions/moved/weak). */
+[data-theme='dark'] .status-pill,
+[data-theme='dark'] .board-chip:not(.board-chip-sqft):not(.board-chip-perfect):not(.board-chip-collated):not(.board-chip-submissions):not(.board-chip-moved):not(.board-chip-weak) {
+  background: color-mix(in srgb, var(--sc2) 16%, transparent);
   color: var(--sc2);
+  border: 1px solid color-mix(in srgb, var(--sc2) 55%, transparent);
+}
+/* The moved-into-Unapproved chip is a light-blue box in light mode; in dark give
+   it the same dark-tint + coloured-border treatment. */
+[data-theme='dark'] .board-chip-moved {
+  background: color-mix(in srgb, #93c5fd 16%, transparent);
+  color: #93c5fd; border-color: #93c5fd;
 }
 .inv-row.weak-match { background: var(--red-bg); }
 .inv-row.weak-match:hover { background: var(--red-bg); }
@@ -828,6 +883,8 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .al-table td { padding: 11px 12px; border-bottom: 1px solid var(--hairline); color: var(--text-2); vertical-align: top; }
 .al-ts { white-space: nowrap; color: var(--text-muted); }
 .al-uid { font-weight: 700; color: var(--text); }
+.al-uid-link { padding: 0; font: inherit; font-weight: 700; color: var(--brand-strong); }
+.al-uid-link:hover { text-decoration: underline; }
 .al-uid-link { font: inherit; font-weight: 700; color: var(--brand-strong); background: none; border: 0; padding: 0; cursor: pointer; }
 .al-uid-link:hover { text-decoration: underline; }
 .al-actor-name { font-weight: 600; color: var(--text); }
@@ -1364,6 +1421,12 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .badge-offer { background: #FEF3C7; color: var(--oh-yellow); }
 .badge-closed { background: #D1FAE5; color: var(--oh-green); }
 .badge-rejected { background: #FEE2E2; color: #D64045; }
+/* Dark mode: the light badge backgrounds glare on black — swap for subtle
+   dark-aware tints so the CP status badges read cleanly. */
+[data-theme='dark'] .badge-submitted { background: rgba(99, 102, 241, .2); color: #a5b4fc; }
+[data-theme='dark'] .badge-offer { background: var(--amber-bg); color: var(--amber-fg); }
+[data-theme='dark'] .badge-closed { background: var(--green-bg); color: var(--green-fg); }
+[data-theme='dark'] .badge-rejected { background: var(--red-bg); color: var(--red-fg); }
 
 /* ===== Bottom strip =====
    Fixed bottom nav for the CP app (replaces the old register/call FABs).
@@ -1506,25 +1569,8 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
   .form-section { padding: 0 16px 20px; }
 }
 
-/* ── loading indicator (animated dots) ─────────────────────────────────── */
-.loading-inline {
-  display: flex; align-items: center; justify-content: center;
-  color: var(--text-muted); font-size: 14px; padding: 28px 16px; gap: 1px;
-}
-.loading-dots::after {
-  content: '.';
-  animation: loadingdots 1.1s steps(1, end) infinite;
-}
-@keyframes loadingdots {
-  0%   { content: '.'; }
-  20%  { content: '..'; }
-  40%  { content: '...'; }
-  60%  { content: '....'; }
-  80%  { content: '.....'; }
-  100% { content: '.'; }
-}
-/* give the full-screen bootstrap loader the same dot loop */
-.loading .loading-dots::after { animation: loadingdots 1.1s steps(1, end) infinite; }
+/* Loading is now a shimmer skeleton (see Loading.jsx / .inv-skel) — the
+   animated-dots indicator was removed. .loading just centers the full-area one. */
 
 /* ── page title is shown in the topbar; don't repeat it in the page body ── */
 .page-head h2 { display: none; }
@@ -1624,6 +1670,15 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .cp-chat-pane .cometchat-message-header__back-button-wrapper,
 .cp-chat-pane .cometchat-message-header__menu-button--search { display: none !important; }
 
+/* Embedded submission-detail thread (CpThread) — fixed-height, and strip the
+   same back/search chrome from its header. */
+.cp-thread { height: 380px; display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden; }
+.cp-thread .cometchat-message-header__back-button,
+.cp-thread .cometchat-message-header__back-button-wrapper,
+.cp-thread .cometchat-message-header__menu-button--search { display: none !important; }
+/* The chat column in the table-expand needs more room than a data column. */
+.expand-col-chat { flex-basis: 380px; min-width: 380px; }
+
 /* Segmented tab control (Chats/Users, Live/History, broadcast mode). */
 .chat-seg { display: flex; gap: 6px; padding: 8px; border-bottom: 1px solid var(--border); }
 .chat-seg-end { justify-content: flex-end; }
@@ -1674,11 +1729,16 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .chat-access-badge.off { color: var(--red-fg); }
 .chat-mgr-section { margin-bottom: 22px; }
 
-/* Best-effort: nudge CometChat UIKit accents toward our brand. */
-.chat-inbox, .cp-chat-pane {
+/* Nudge CometChat UIKit accents toward our brand. These wrappers sit INSIDE
+   CometChatThemeProvider's themed div (which carries data-theme + the neutral/
+   bg/text palette), so they're the nearest ancestor for the accent vars — our
+   brand wins over CometChat's default purple in both light and dark. */
+.chat-inbox, .cp-chat-pane, .cp-thread {
   --cometchat-primary-color: var(--brand);
   --cometchat-brand-color: var(--brand);
   --cometchat-primary-button-background: var(--brand);
+  --cometchat-text-color-highlight: var(--brand);
+  --cometchat-border-color-highlight: var(--brand);
 }
 
 @media (max-width: 640px) {

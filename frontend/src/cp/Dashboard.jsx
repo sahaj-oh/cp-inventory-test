@@ -48,14 +48,16 @@ function badgeClass(s) {
 }
 
 function badgeStyle(s) {
+  // Token pairs / translucent tints so these read in BOTH light and dark
+  // (the light-hex versions glared as white blobs in dark mode).
   if (s.perfect_match_at_submit) {
-    return { background: '#FEE2E2', color: '#991B1B', border: '1px solid #FCA5A5' };
+    return { background: 'var(--red-bg)', color: 'var(--red-fg)', border: '1px solid var(--red)' };
   }
   if (s.status === 'Unapproved') {
     return { background: '#ffd73b', color: '#1a1a1a', border: '1px solid #ffd73b' };
   }
   if (s.status === 'Visit Requested') {
-    return { background: '#F5F3FF', color: '#8b5cf6', border: '1px solid #C4B5FD' };
+    return { background: 'rgba(139,92,246,0.16)', color: '#8b5cf6', border: '1px solid rgba(139,92,246,0.42)' };
   }
   return undefined;
 }

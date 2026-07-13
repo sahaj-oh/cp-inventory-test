@@ -13,6 +13,7 @@ import { useEffect, useRef, useState } from 'react';
 import { formatBhk, formatPrice, formatOhPrice, formatDateOnly, formatTime12, STAGES, timeAgo } from '../../format';
 import MatchDetailsModal from '../MatchDetailsModal.jsx';
 import Loading from '../Loading.jsx';
+import { IconCalendar } from '../icons.jsx';
 
 /**
  * Infinite-scroll sentinel rendered at the bottom of each kanban column.
@@ -138,15 +139,14 @@ export default function BoardView({
               //   2. Submissions match (incl. both)      → purple (another CP — stronger signal)
               //   3. Collated match                      → yellow
               //   4. Moved into Unapproved from a stage  → blue (provenance flag)
-              const cardOverlayStyle = isPerfectMatch
-                ? { background: '#fef2f2', border: '1.5px solid #f87171' }
-                : isSubmissionsPartial
-                  ? { background: '#f5f3ff', border: '1.5px solid #c4b5fd' }
-                  : isCollatedPartial
-                    ? { background: '#fffbeb', border: '1.5px solid #fcd34d' }
-                    : movedFromStage
-                      ? { background: '#eff6ff', border: '1.5px solid #93c5fd' }
-                      : undefined;
+              // Match-type overlay → a theme-aware class instead of inline hex:
+              // soft tint + coloured border in light, black card + coloured
+              // border in dark (the light tint glared + hid text on black).
+              const matchClass = isPerfectMatch ? 'card-match-perfect'
+                : isSubmissionsPartial ? 'card-match-submissions'
+                  : isCollatedPartial ? 'card-match-collated'
+                    : movedFromStage ? 'card-match-moved'
+                      : '';
               const handleClick = (e) => {
                 if (bulkMode) {
                   e.stopPropagation();
@@ -183,8 +183,7 @@ export default function BoardView({
               return (
                 <div
                   key={s.id}
-                  className={`card-block board-card ${selectedId === s.id ? 'active' : ''} ${isWeakMatch ? 'weak-match' : ''} ${isChecked ? 'bulk-selected' : ''}`}
-                  style={cardOverlayStyle}
+                  className={`card-block board-card ${matchClass} ${selectedId === s.id ? 'active' : ''} ${isWeakMatch ? 'weak-match' : ''} ${isChecked ? 'bulk-selected' : ''}`}
                   onClick={handleClick}
                   title={isWeakMatch ? 'Society name was a weak match during import — verify' : undefined}
                 >
@@ -287,7 +286,7 @@ export default function BoardView({
                   {/* Schedule badge only on the Visit Scheduled stage. */}
                   {s.status === 'Visit Scheduled' && s.scheduled_date && (
                     <div className="board-card-schedule">
-                      📅 {formatDateOnly(s.scheduled_date)}
+                      <IconCalendar size={12} style={{ verticalAlign: '-2px', marginRight: 4 }} />{formatDateOnly(s.scheduled_date)}
                       {s.scheduled_time ? ` · ${formatTime12(s.scheduled_time)}` : ''}
                       {s.field_exec_name ? ` · ${s.field_exec_name}` : ''}
                     </div>

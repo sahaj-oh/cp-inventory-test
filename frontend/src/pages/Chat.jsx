@@ -12,6 +12,7 @@ import {
 } from '@cometchat/chat-uikit-react';
 import { CometChat } from '@cometchat/chat-sdk-javascript';
 import { loginCometChat } from '../cometchat';
+import { useTheme } from '../contexts/ThemeContext.jsx';
 import { api } from '../api';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import ChatErrorBoundary from '../components/ChatErrorBoundary';
@@ -28,6 +29,7 @@ function peerCpId(peer) {
 
 export default function Chat() {
   const { user } = useAuth();
+  const { theme } = useTheme();
   const [ready, setReady] = useState(false);
   const [error, setError] = useState('');
   const [peer, setPeer] = useState(null);
@@ -84,7 +86,10 @@ export default function Chat() {
       ) : !ready ? (
         <div className="empty-state"><p>Loading chat…</p></div>
       ) : (
-        <CometChatProvider>
+        // theme={theme} feeds CometChat our app theme so its bundled dark palette
+        // responds (default is 'light'). .chat-inbox's brand-accent vars sit inside
+        // its themed wrapper, so our accent still wins over CometChat's purple.
+        <CometChatProvider theme={theme}>
           <div className="chat-inbox">
             <div className="chat-list">
               {isAdmin && (

@@ -1,13 +1,15 @@
 // Lightweight inline stroke icons. One component per glyph, 1.6px stroke,
 // inherits currentColor. Keeps the bundle dependency-free.
-const S = ({ children, size = 18, fill = 'none' }) => (
+const S = ({ children, size = 18, fill = 'none', ...rest }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill={fill}
-       stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+       stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" {...rest}>
     {children}
   </svg>
 );
 
 export const IconHome = (p) => <S {...p}><path d="M3 10.5 12 3l9 7.5" /><path d="M5 9.5V21h14V9.5" /><path d="M9.5 21v-6h5v6" /></S>;
+// Plain calendar — replaces the 📅 emoji on schedule chips/buttons.
+export const IconCalendar = (p) => <S {...p}><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></S>;
 // Siren / beacon — alert vibe (🚨) in the same stroke style as the set.
 export const IconLeads = (p) => <S {...p}><path d="M5 18h14" /><path d="M7 18a5 5 0 0 1 10 0" /><path d="M12 13V9" /><path d="M12 9 9.5 6M12 9l2.5-3" /></S>;
 export const IconFollowUp = (p) => <S {...p}><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /><path d="m9 16 2 2 4-4" /></S>;

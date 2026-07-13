@@ -36,7 +36,7 @@ export default function Impersonator() {
         <div className="card-block">
           <div className="imp-picker-label">Pick a channel partner</div>
           <CpSelector city="" onSelect={open} />
-          {busy && <div className="loading-inline">Starting<span className="loading-dots" aria-hidden="true" /></div>}
+          {busy && <div style={{ marginTop: 10 }}><span className="inv-skel" style={{ display: 'inline-block', width: 120, height: 12 }} /></div>}
           {error && <div className="modal-error" style={{ marginTop: 8 }}>{error}</div>}
         </div>
         {embed && (

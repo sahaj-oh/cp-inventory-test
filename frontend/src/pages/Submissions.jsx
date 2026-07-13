@@ -11,6 +11,7 @@ import TableView from '../components/submissions/TableView.jsx';
 import CardDetailModal from '../components/submissions/CardDetailModal.jsx';
 import FilterModal from '../components/submissions/FilterModal.jsx';
 import BulkBar from '../components/submissions/BulkBar.jsx';
+import AddInventoryOnBehalf from '../components/submissions/AddInventoryOnBehalf.jsx';
 import Loading from '../components/Loading.jsx';
 
 const CITY_TABS = ['All', 'Noida', 'Gurgaon', 'Ghaziabad'];
@@ -40,7 +41,7 @@ export default function Submissions() {
   // per keystroke on a multi-thousand-row dataset.
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
-  const [view, setView] = useState(() => (searchParams.get('status') ? 'table' : 'board'));
+  const [view, setView] = useState('table');
   const [submissions, setSubmissions] = useState([]);
   const [counts, setCounts] = useState({});
   const [loading, setLoading] = useState(true);
@@ -86,9 +87,9 @@ export default function Submissions() {
     });
   }, [submissions]);
 
-  // On-behalf "Add Inventory" flow — trigger only for now; the modal itself
-  // (AddInventoryOnBehalf) hasn't been ported yet. The trigger button lives in
-  // the topbar (Layout) and fires this window event.
+  // On-behalf "Add Inventory" flow — the trigger button lives in the topbar
+  // (Layout) and fires this window event; the AddInventoryOnBehalf popup below
+  // handles city → CP → form and posts via /admin/submissions/on-behalf.
   const [addingInventory, setAddingInventory] = useState(false);
   useEffect(() => {
     const open = () => setAddingInventory(true);
@@ -296,9 +297,6 @@ export default function Submissions() {
     <div>
       <div className="page-head">
         <h2>Submissions</h2>
-        <div className="ph-sub muted">
-          {loading ? <Loading /> : (counts.Total != null ? `${counts.Total} total` : '')}
-        </div>
       </div>
 
       {/* Toolbar */}
@@ -415,10 +413,10 @@ export default function Submissions() {
       />
 
       {addingInventory && (
-        <div className="muted" style={{ margin: '2px 0 14px' }}>
-          Add Inventory on behalf — coming soon.{' '}
-          <button type="button" className="btn-link" onClick={() => setAddingInventory(false)}>Close</button>
-        </div>
+        <AddInventoryOnBehalf
+          onClose={() => setAddingInventory(false)}
+          onCreated={reload}
+        />
       )}
 
       {/* Stage count pills — clickable as a status filter. Table view narrows
@@ -501,6 +499,7 @@ export default function Submissions() {
           onToggleSelect={onToggleSelect}
           onToggleAll={onToggleAll}
           statusFilter={statusFilter}
+          onOpenSubmission={setSelectedId}
         />
       )}
 

@@ -3,6 +3,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { api, ApiError } from '../api';
 import { clearSession, getUser, isImpersonating, setUser } from '../auth';
 import { logoutCometChat } from '../cometchat';
+import { detailStore } from '../components/submissions/submissionDetailStore.js';
 
 const AuthContext = createContext(null);
 
@@ -33,6 +34,7 @@ export function AuthProvider({ children }) {
   // Sign in: cache the user, start the curtain, then flip the visible state
   // ~once the curtain has covered the screen so the route swap stays hidden.
   function signIn(u) {
+    api.resetCache();  // new identity — never serve the previous user's cached reads
     setUser(u);
     runCurtain('in', u?.name);
     setTimeout(() => setUserState(u), 650);
@@ -143,6 +145,8 @@ export function AuthProvider({ children }) {
     logoutCometChat().catch(() => {});
     setTimeout(() => {
       if (!isImpersonating()) api.logout().catch(() => {});
+      api.resetCache();  // drop this user's cached reads on the way out
+      detailStore.clear();  // + the persisted submission-detail store (soft logout keeps the JS context)
       clearSession();
       setUserState(null);
     }, 650);

@@ -13,21 +13,37 @@ import { stageMeta, stageLabel } from '../../format';
 import { IconClose } from '../icons.jsx';
 import SubmissionSections from './SubmissionSections.jsx';
 import SectionsSkeleton from './SectionsSkeleton.jsx';
+import { detailStore } from './submissionDetailStore.js';
+import { showToast } from '../Toast.jsx';
 
 export default function CardDetailModal({ id, canAct, onClose }) {
-  const [data, setData] = useState(null); // null = loading
+  // Shared persisted store (with ExpandPanel) — reopening a submission shows the
+  // last state instantly and reflects edits made anywhere, no re-fetch.
+  const [data, setData] = useState(() => (id ? detailStore.get(id) : null) || null);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     if (!id) return undefined;
+    if (detailStore.has(id)) { setData(detailStore.get(id)); setError(null); return undefined; }
     let alive = true;
     setData(null);
     setError(null);
     api.adminGetSubmission(id)
-      .then((res) => { if (alive) setData({ ...res.submission, events: res.events }); })
+      .then((res) => {
+        const merged = { ...res.submission, events: res.events };
+        detailStore.set(id, merged);
+        if (alive) setData(merged);
+      })
       .catch((err) => { if (alive) setError(err.message || 'Failed to load'); });
     return () => { alive = false; };
   }, [id]);
+
+  // Persist section edits to the store + confirm with a toast (optimistic).
+  const handleChanged = (updated) => {
+    if (id) detailStore.set(id, updated);
+    setData(updated);
+    showToast('Changes saved');
+  };
 
   useEffect(() => {
     if (!id) return undefined;
@@ -63,7 +79,7 @@ export default function CardDetailModal({ id, canAct, onClose }) {
         ) : !data ? (
           <SectionsSkeleton stacked />
         ) : (
-          <SubmissionSections s={data} canAct={canAct} onChanged={setData} stacked />
+          <SubmissionSections s={data} canAct={canAct} onChanged={handleChanged} stacked />
         )}
       </div>
     </div>

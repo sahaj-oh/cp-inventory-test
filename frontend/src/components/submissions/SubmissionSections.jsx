@@ -31,6 +31,8 @@ import ScheduleVisitSection from './detail/ScheduleVisitSection.jsx';
 import NotesSection from './detail/NotesSection.jsx';
 import MediaSection from './detail/MediaSection.jsx';
 import TicketsSection from '../tickets/TicketsSection.jsx';
+import CpThread from '../chat/CpThread.jsx';
+import MatchDetailsModal from '../MatchDetailsModal.jsx';
 
 // Ported verbatim from CP DetailPanel.jsx's banners block (perfect-match /
 // withdrawn / unit-less), just swapped to token-agnostic literal colors
@@ -157,9 +159,60 @@ function ActivityTimeline({ s }) {
   );
 }
 
-export default function SubmissionSections({ s, canAct, onChanged, onOpenCpHistory, stacked, columns }) {
+// Compact match summary for the table-expand Status column: the top matched
+// property + "+N" for the rest, styled like the collated-match chip and opening
+// the same MatchDetailsModal on click. Colour tracks the match type
+// (perfect=red, submissions=purple, collated=yellow).
+function MatchProperty({ s, onOpenSubmission }) {
+  const [open, setOpen] = useState(false);
+  const isPerfect = !!s.perfect_match_at_submit;
+  const isSubmissions = !!s.submissions_match;
+  const isCollated = !!s.collated_match;
+  if (!(isPerfect || isSubmissions || isCollated)) return null;
+
+  const items = Array.isArray(s.match_details) ? s.match_details : [];
+  const top = items[0];
+  const chipClass = isPerfect ? 'board-chip-perfect'
+    : isSubmissions ? 'board-chip-submissions'
+      : 'board-chip-collated';
+  const typeLabel = isPerfect ? 'Perfect match' : isSubmissions ? 'Submissions match' : 'Collated match';
+
+  // Top property: "Society · T13 U502". Falls back to the match-type name when
+  // there are no stored match_details (older, un-backfilled rows).
+  let label = typeLabel;
+  if (top) {
+    const unit = [top.tower && `T${top.tower}`, top.unit_no && `U${top.unit_no}`].filter(Boolean).join(' ');
+    label = [top.society || '—', unit].filter(Boolean).join(' · ');
+  }
+  const extra = items.length > 1 ? ` +${items.length - 1}` : '';
+
+  return (
+    <div className="card-block">
+      <h3>Match</h3>
+      <button
+        type="button"
+        className={`board-chip ${chipClass} match-prop-btn`}
+        onClick={(e) => { e.stopPropagation(); setOpen(true); }}
+        title="See the matched record(s)"
+      >
+        {label}{extra}
+      </button>
+      <MatchDetailsModal
+        open={open}
+        onClose={() => setOpen(false)}
+        items={items}
+        onOpenSubmission={onOpenSubmission}
+        title="Matched records"
+      />
+    </div>
+  );
+}
+
+export default function SubmissionSections({ s, canAct, onChanged, onOpenCpHistory, onOpenSubmission, stacked, columns }) {
   const { user } = useAuth();
   const role = user?.role;
+  // Staff (admin/manager/rm) get an inline CometChat thread with this CP.
+  const canChat = canAct && !!s.cp_id;
   if (!s) return null;
 
   // Direct-style horizontal columns for the table-view row expand: one section
@@ -176,6 +229,7 @@ export default function SubmissionSections({ s, canAct, onChanged, onOpenCpHisto
         <div className="expand-inner expand-cols">
           <div className="expand-col">
             <StatusSection submission={s} canAct={canAct} onChanged={onChanged} />
+            <MatchProperty s={s} onOpenSubmission={onOpenSubmission} />
             <ScheduleVisitSection submission={s} canAct={canAct} onChanged={onChanged} />
           </div>
           <div className="expand-col">
@@ -205,6 +259,14 @@ export default function SubmissionSections({ s, canAct, onChanged, onOpenCpHisto
           </div>
           <div className="expand-col">
             <MediaSection submission={s} canAct={canAct} onChanged={onChanged} only="media" />
+          </div>
+          <div className="expand-col expand-col-chat">
+            {canChat && (
+              <div className="card-block">
+                <h3>Chat</h3>
+                <CpThread cpId={s.cp_id} />
+              </div>
+            )}
           </div>
         </div>
         </div>
@@ -237,6 +299,12 @@ export default function SubmissionSections({ s, canAct, onChanged, onOpenCpHisto
         <ActivityTimeline s={s} />
         <TicketsSection submissionId={s.id} publicId={s.public_id} canCreate={canAct && role !== 'rm'} />
         <MediaSection submission={s} canAct={canAct} onChanged={onChanged} />
+        {canChat && (
+          <div className="card-block">
+            <h3>Chat</h3>
+            <CpThread cpId={s.cp_id} />
+          </div>
+        )}
       </div>
     </div>
   );

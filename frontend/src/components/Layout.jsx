@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext.jsx';
 import { useTheme } from '../contexts/ThemeContext.jsx';
 import BusyOverlay from './BusyOverlay.jsx';
 import PageTransition from './PageTransition.jsx';
+import Toast from './Toast.jsx';
 import CreateTicketButton from './tickets/CreateTicketButton.jsx';
 import { useUnreadChat } from '../hooks/useUnreadChat';
 import {
@@ -40,7 +41,7 @@ export default function Layout() {
   const canTickets = role === 'admin' || role === 'manager' || role === 'rm';
   const canAct = canTickets; // admin/manager/rm can perform actions (adds on behalf, etc.)
   // Number of CPs with unread chat — drives the count on the Chat nav icon.
-  const chatUnread = useUnreadChat({ people: true, enabled: isAdmin });
+  const chatUnread = useUnreadChat({ people: true, enabled: canTickets });
 
   // Poll "needs my action" ticket count for the nav dot (skip for roles with no
   // ticket access). 15s while visible; on focus; on local ticket mutations.
@@ -103,11 +104,11 @@ export default function Layout() {
         {navItem({ to: '/submissions', label: 'Submissions', Icon: IconBoard })}
         {navItem({ to: '/oh-properties', label: 'OH Properties', Icon: IconBuilding })}
         {canTickets && navItem({ to: '/tickets', label: 'Tickets', Icon: IconTicket, count: ticketDot })}
+        {canTickets && navItem({ to: '/chat', label: 'Chat', Icon: IconChat, count: chatUnread })}
 
         {isAdmin && (
           <>
             <div className="sidebar-section-label">Admin</div>
-            {navItem({ to: '/chat', label: 'Chat', Icon: IconChat, count: chatUnread })}
             {navItem({ to: '/impersonator', label: 'Impersonator', Icon: IconEye })}
             {navItem({ to: '/users', label: 'Users', Icon: IconUsers })}
             {navItem({ to: '/logs', label: 'Logs', Icon: IconLogs })}
@@ -168,6 +169,7 @@ export default function Layout() {
         <main className="main"><PageTransition /></main>
       </div>
       <BusyOverlay />
+      <Toast />
     </div>
   );
 }

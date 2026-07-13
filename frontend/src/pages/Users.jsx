@@ -31,7 +31,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { ApiError, api } from '../api';
 import { validatePhone, sanitizePhone } from '../format';
 import { IconLock } from '../components/icons.jsx';
-import Loading from '../components/Loading.jsx';
 
 const ROLE_OPTIONS = [
   { value: 'rm',      label: 'RM' },
@@ -77,11 +76,21 @@ function SkeletonRows() {
   ));
 }
 
+const userKey = (u) => `${u.source}-${u.id}`;
+// Run a state update inside a View Transition so DOM changes (a row moving to
+// the bottom on deactivate, a badge flipping) animate smoothly instead of the
+// table snapping. Falls back to a plain update where the API is unsupported.
+function withTransition(update) {
+  if (typeof document !== 'undefined' && document.startViewTransition) document.startViewTransition(update);
+  else update();
+}
+
 export default function Users() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState(null); // transient toast, e.g. 'X logged out'
 
   // Add User form
   const [newName, setNewName] = useState('');
@@ -112,6 +121,26 @@ export default function Users() {
   };
 
   useEffect(() => { reload(); }, []);
+
+  // Optimistic patch: update the row locally (animated reorder) and fire the API
+  // in the background; on failure, revert to the server's truth.
+  async function patchUser(u, changes, apiCall) {
+    withTransition(() => setUsers((prev) => prev.map(
+      (x) => (userKey(x) === userKey(u) ? { ...x, ...changes } : x),
+    )));
+    try {
+      await apiCall();
+    } catch (e) {
+      await reload();
+      alert(e instanceof ApiError ? e.message : 'Update failed');
+    }
+  }
+
+  // Transient toast (bottom-center); auto-dismisses.
+  function showToast(msg) {
+    setToast(msg);
+    setTimeout(() => setToast((cur) => (cur === msg ? null : cur)), 3200);
+  }
 
   const handleAdd = async () => {
     setError('');
@@ -147,7 +176,7 @@ export default function Users() {
     }
   };
 
-  const handleRoleChange = async (u, nextRole) => {
+  const handleRoleChange = (u, nextRole) => {
     if (u.role === nextRole) return;
     // Prevent moves that cross the rms <-> channel_partners boundary; backend
     // rejects them but warn here for clarity. Viewer is in rms, so flipping
@@ -166,6 +195,7 @@ export default function Users() {
     // prompt the admin to pick one. The backend re-validates this — the prompt
     // is just a friendlier path than letting the PATCH 400.
     const payload = { role: nextRole };
+    const changes = { role: nextRole };
     if (nextRole === 'viewer' && !u.city_id) {
       const cityLabels = CITY_OPTIONS.map((c, i) => `${i + 1}=${c.label}`).join(', ');
       const pick = prompt(
@@ -175,48 +205,36 @@ export default function Users() {
       const idx = parseInt(pick, 10);
       if (!idx || idx < 1 || idx > CITY_OPTIONS.length) return;
       payload.city_id = CITY_OPTIONS[idx - 1].value;
+      changes.city_id = CITY_OPTIONS[idx - 1].value;
+      changes.city = CITY_OPTIONS[idx - 1].label;
     }
-    try {
-      await api.adminPatchStaffUser(u.source, u.id, payload);
-      await reload();
-    } catch (e) {
-      alert(e instanceof ApiError ? e.message : 'Update failed');
-    }
+    // Optimistic: the row re-sorts by role (View Transition slides it) — no reload.
+    patchUser(u, changes, () => api.adminPatchStaffUser(u.source, u.id, payload));
   };
 
-  const handleOhToggle = async (u, next) => {
-    try {
-      await api.adminPatchStaffUser(u.source, u.id, { can_see_oh_properties: next });
-      await reload();
-    } catch (e) {
-      alert(e instanceof ApiError ? e.message : 'Update failed');
-    }
+  const handleOhToggle = (u, next) => {
+    if (!confirm(`${next ? 'Allow' : 'Block'} OH Properties access for ${u.name || u.phone}?`)) return;
+    patchUser(u, { can_see_oh_properties: next }, () => api.adminPatchStaffUser(u.source, u.id, { can_see_oh_properties: next }));
   };
 
-  const handleDeactivate = async (u) => {
+  const handleDeactivate = (u) => {
     if (!confirm(`Deactivate ${u.name || u.phone}? They won't be able to log in.`)) return;
-    try {
-      await api.adminPatchStaffUser(u.source, u.id, { is_active: false });
-      await reload();
-    } catch (e) {
-      alert(e instanceof ApiError ? e.message : 'Update failed');
-    }
+    // is_active:false → the row re-sorts to the bottom; the View Transition
+    // slides it there instead of the table reloading whole.
+    patchUser(u, { is_active: false }, () => api.adminPatchStaffUser(u.source, u.id, { is_active: false }));
   };
 
-  const handleReactivate = async (u) => {
-    try {
-      await api.adminPatchStaffUser(u.source, u.id, { is_active: true });
-      await reload();
-    } catch (e) {
-      alert(e instanceof ApiError ? e.message : 'Update failed');
-    }
-  };
+  const handleReactivate = (u) => patchUser(
+    u, { is_active: true },
+    () => api.adminPatchStaffUser(u.source, u.id, { is_active: true }),
+  );
 
   const handleForceLogout = async (u) => {
     if (!confirm(`Force-logout ${u.name || u.phone}? Their next request will redirect them to login.`)) return;
     try {
       await api.adminForceLogoutUser(u.source, u.id);
-      await reload();
+      // Force-logout doesn't change the row's position — surface a toast.
+      showToast(`${u.name || u.phone} logged out`);
     } catch (e) {
       alert(e instanceof ApiError ? e.message : 'Force logout failed');
     }
@@ -279,9 +297,6 @@ export default function Users() {
     <div>
       <div className="page-head">
         <h2>Users</h2>
-        <div className="ph-sub muted">
-          {loading ? <Loading /> : `${activeCount} active${inactiveCount > 0 ? `, ${inactiveCount} inactive` : ''}`}
-        </div>
       </div>
 
       {error && <div className="modal-error" style={{ marginBottom: 16 }}>{error}</div>}
@@ -356,7 +371,14 @@ export default function Users() {
       {/* All users */}
       <div className="card-block">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
-          <h3 style={{ marginBottom: 0 }}>All users</h3>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
+            <h3 style={{ marginBottom: 0 }}>All users</h3>
+            {!loading && (
+              <span className="muted" style={{ fontSize: 13 }}>
+                {activeCount} active{inactiveCount > 0 ? `, ${inactiveCount} inactive` : ''}
+              </span>
+            )}
+          </div>
           {confirmForceAll ? (
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <span style={{ fontSize: 12, color: 'var(--red-fg)', fontWeight: 600 }}>
@@ -397,7 +419,11 @@ export default function Users() {
                 </tr>
               ) : (
                 sortedUsers.map((u) => (
-                  <tr key={`${u.source}-${u.id}`} className={u.is_active ? '' : 'usr-inactive'}>
+                  <tr
+                    key={`${u.source}-${u.id}`}
+                    className={u.is_active ? '' : 'usr-inactive'}
+                    style={{ viewTransitionName: `u-${userKey(u).replace(/[^a-z0-9-]/gi, '-')}` }}
+                  >
                     <td>{u.email || <span className="muted">—</span>}</td>
                     <td style={{ fontWeight: 600 }}>{u.name || '—'}</td>
                     <td>{u.phone || '—'}</td>
@@ -461,6 +487,8 @@ export default function Users() {
           <strong>Viewer</strong> = read-only, one city · <strong>Admin</strong> = full access.
         </div>
       </div>
+
+      {toast && <div className="toast" role="status">{toast}</div>}
     </div>
   );
 }

@@ -29,6 +29,7 @@ import Loading from '../components/Loading.jsx';
 const PAGE_SIZE = 100;
 
 const DATE_PRESETS = ['All', 'Yesterday', 'This Week', 'This Month', 'Custom'];
+const CITY_TABS = ['All', 'Noida', 'Gurgaon', 'Ghaziabad'];
 
 /** ISO date (YYYY-MM-DD) helpers in local time. */
 function isoDate(d) {
@@ -114,7 +115,8 @@ export default function OhProperties() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const activeFilterCount = [city, source, bhk, floor, areaMin, areaMax, datePreset !== 'All']
+  // City is now a toolbar tab (not a modal filter), so it's excluded here.
+  const activeFilterCount = [source, bhk, floor, areaMin, areaMax, datePreset !== 'All']
     .filter(Boolean).length;
 
   // Reset page to 1 whenever a filter/sort/search/type changes.
@@ -193,6 +195,22 @@ export default function OhProperties() {
       </div>
 
       <div className="toolbar">
+        <div className="city-tabs">
+          {CITY_TABS.map((c) => {
+            const val = c === 'All' ? '' : c;
+            return (
+              <button
+                key={c}
+                type="button"
+                className={`tab${city === val ? ' tab-active' : ''}`}
+                onClick={() => setCity(val)}
+              >
+                {c}
+              </button>
+            );
+          })}
+        </div>
+
         <div className="search-form" role="search">
           <input
             type="search"
@@ -266,9 +284,13 @@ export default function OhProperties() {
           </thead>
           <tbody>
             {loading && data.results.length === 0 ? (
-              <tr>
-                <td colSpan={11} className="inv-empty"><Loading /></td>
-              </tr>
+              Array.from({ length: 10 }).map((_, i) => (
+                <tr key={`sk-${i}`} className="inv-row inv-row-skel">
+                  {Array.from({ length: 11 }).map((_, c) => (
+                    <td key={c}><span className="inv-skel" style={{ width: `${45 + (c * 9) % 45}%` }} /></td>
+                  ))}
+                </tr>
+              ))
             ) : data.results.length === 0 && !loading ? (
               <tr>
                 <td colSpan={11} className="inv-empty">No OH Properties match your filters.</td>
@@ -372,14 +394,6 @@ function FiltersModal({ open, initial, facets, onApply, onClose }) {
         </div>
 
         <div className="filter-grid">
-          <div className="filter-block">
-            <label>City</label>
-            <select value={f.city} onChange={(e) => set('city', e.target.value)}>
-              <option value="">All</option>
-              {['Noida', 'Gurgaon', 'Ghaziabad'].map((o) => <option key={o} value={o}>{o}</option>)}
-            </select>
-          </div>
-
           <div className="filter-block">
             <label>Source</label>
             <select value={f.source} onChange={(e) => set('source', e.target.value)}>

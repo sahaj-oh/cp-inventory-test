@@ -10,6 +10,7 @@ let forceLogoutInFlight = false;
 function forceLogoutOnExpiredToken() {
   if (forceLogoutInFlight) return;
   forceLogoutInFlight = true;
+  resetCache();  // identity gone — drop the previous user's cached reads
   clearSession();
   // Full reload so AuthContext re-mounts, finds no token, and routes to Login.
   // location.replace() drops the current history entry (no "back" button into
@@ -31,45 +32,133 @@ export class ApiError extends Error {
   }
 }
 
-async function request(path, { method = 'GET', body = null, auth = true, autoLogout = true } = {}) {
-  const headers = { 'Content-Type': 'application/json' };
-  if (auth) {
-    // getToken() is non-null ONLY in an impersonation tab; normal sessions
-    // authenticate via the HttpOnly cookie sent by credentials: 'include'.
-    const token = getToken();
-    if (token) headers.Authorization = `Bearer ${token}`;
-  }
-  let res;
-  try {
-    res = await fetch(`${API_BASE}${path}`, {
-      method,
-      headers,
-      credentials: 'include',
-      body: body ? JSON.stringify(body) : undefined,
-    });
-  } catch (netErr) {
-    throw new ApiError(0, { error: `Network error: ${netErr.message}` });
-  }
-  let data = null;
-  try {
-    data = await res.json();
-  } catch {
-    data = null;
-  }
-  if (!res.ok) {
-    // Force-logout on auth failure: a 401 on a request that DID send a token
-    // means the token is bad / expired / revoked. Clear session and reload
-    // so the user lands on Login instead of staring at a "Token expired"
-    // message in the middle of the app. We DON'T trigger this for unauth'd
-    // requests (login, send-otp; auth:false) since those legitimately 401 on
-    // bad creds, and NOT the mount bootstrap (autoLogout:false) which 401s
-    // normally when nobody is logged in — reloading there would loop.
-    if (res.status === 401 && auth && autoLogout) {
-      forceLogoutOnExpiredToken();
+// ── GET cache ──────────────────────────────────────────────────────────────
+// Correctness over cleverness: only GETs are cached (in-memory Map keyed by the
+// full path+query), and ANY write nukes the whole cache — you never see your own
+// edits stale. Cross-user changes are bounded by TTL (or targeted invalidate());
+// login/logout resets everything. The deliberate cost is over-invalidation.
+let cacheEpoch = 0;
+const getCache = new Map();   // path -> { data, expires }
+const inflight = new Map();   // path -> Promise<data> (dedupes concurrent GETs, cached or not)
+
+// TTL (seconds) by path prefix — FIRST match wins. No match → 0 → not cached.
+const TTL_RULES = [
+  ['/tickets/pending-count', 10],   // live nav badge
+  ['/tickets', 30],
+  ['/me', 0],                        // identity — always fresh
+  ['/health', 0],
+  ['/comet/', 20],                   // chat state (requests / access / history)
+  ['/submissions/stats', 120],
+  ['/', 1800],                       // everything else (most reads) — 30 min
+];
+function ttlFor(path) {
+  for (const [prefix, ttl] of TTL_RULES) if (path.startsWith(prefix)) return ttl;
+  return 0;
+}
+
+// Reads hand out clones so a component can't mutate the shared cached object.
+function clone(data) {
+  if (data == null || typeof data !== 'object') return data;
+  try { return structuredClone(data); } catch { return JSON.parse(JSON.stringify(data)); }
+}
+
+// Drop matching cache entries — for cross-user changes caught by polling
+// (e.g. a tickets:updated broadcast), which aren't your own writes.
+function invalidateCache(prefix) {
+  for (const key of getCache.keys()) if (key.startsWith(prefix)) getCache.delete(key);
+}
+
+// Bump the epoch and clear everything — writes and auth changes both do this so
+// a stale read (or a new identity's view of the old user's data) never survives.
+function resetCache() {
+  cacheEpoch += 1;
+  getCache.clear();
+  inflight.clear();
+}
+
+async function request(path, { method = 'GET', body = null, auth = true, autoLogout = true, fresh = false, resetCacheOnWrite = true } = {}) {
+  // The raw network call.
+  const doFetch = async () => {
+    const headers = { 'Content-Type': 'application/json' };
+    if (auth) {
+      // getToken() is non-null ONLY in an impersonation tab; normal sessions
+      // authenticate via the HttpOnly cookie sent by credentials: 'include'.
+      const token = getToken();
+      if (token) headers.Authorization = `Bearer ${token}`;
     }
-    throw new ApiError(res.status, data || { error: `HTTP ${res.status}` });
+    let res;
+    try {
+      res = await fetch(`${API_BASE}${path}`, {
+        method,
+        headers,
+        credentials: 'include',
+        body: body ? JSON.stringify(body) : undefined,
+      });
+    } catch (netErr) {
+      throw new ApiError(0, { error: `Network error: ${netErr.message}` });
+    }
+    let data = null;
+    try { data = await res.json(); } catch { data = null; }
+    if (!res.ok) {
+      // Force-logout on auth failure. auth:false (login/otp) and autoLogout:false
+      // (mount bootstrap) legitimately 401 and must NOT trigger it (see
+      // forceLogoutOnExpiredToken).
+      if (res.status === 401 && auth && autoLogout) forceLogoutOnExpiredToken();
+      throw new ApiError(res.status, data || { error: `HTTP ${res.status}` });
+    }
+    return data;
+  };
+
+  // Writes wipe everything on completion — including in-flight GETs, so a fetch
+  // fired right after can't piggyback on a pre-write request and render stale.
+  // `resetCacheOnWrite: false` opts out for POSTs that don't mutate any cached
+  // read (e.g. CometChat user provisioning) — otherwise those would blow the
+  // whole cache every time an embedded chat thread mounts.
+  if (method !== 'GET') {
+    let data;
+    try {
+      data = await doFetch();
+    } catch (err) {
+      // The submission detail panel is optimistic now (no re-fetch to reveal an
+      // error), so surface admin save failures as a toast. Skip 401 (the logout
+      // path handles it). Success toasts are fired by the panels themselves.
+      if (path.startsWith('/admin/') && err?.status !== 401) {
+        window.dispatchEvent(new CustomEvent('app-toast', {
+          detail: { message: `Update failed: ${err?.message || 'please retry'}`, kind: 'err' },
+        }));
+      }
+      throw err;
+    }
+    if (resetCacheOnWrite) resetCache();
+    return data;
   }
-  return data;
+
+  const ttl = ttlFor(path);
+
+  // 1. Cache read (skipped by `fresh`) — return a clone.
+  if (!fresh && ttl > 0) {
+    const hit = getCache.get(path);
+    if (hit && hit.expires > Date.now()) return clone(hit.data);
+  }
+
+  // 2. In-flight de-dup: concurrent callers for the same path share one promise.
+  const pending = inflight.get(path);
+  if (pending) return pending.then(clone);
+
+  // 3. Fire. Snapshot the epoch so a write landing mid-flight can't poison the
+  //    cache with pre-write data.
+  const started = cacheEpoch;
+  const p = doFetch()
+    .then((data) => {
+      if (ttl > 0 && cacheEpoch === started) {
+        getCache.set(path, { data, expires: Date.now() + ttl * 1000 });
+      }
+      inflight.delete(path);
+      return data;
+    })
+    .catch((err) => { inflight.delete(path); throw err; });
+  inflight.set(path, p);
+  return p.then(clone);
 }
 
 function buildQuery(params) {
@@ -294,8 +383,10 @@ export const api = {
 
   // Chat (CometChat) — backend provisions the CometChat user, mints login
   // tokens, and proxies/logs sends. Paths mount under /api/comet.
-  getCometAuthToken: () => request('/comet/auth-token', { method: 'POST' }),
-  cometEnsureCpUser: (cpId) => request('/comet/ensure-user', { method: 'POST', body: { cp_id: cpId } }),
+  // Provisioning POSTs — they don't mutate any cached read, so they must NOT
+  // wipe the GET cache (they fire on every chat mount / detail open).
+  getCometAuthToken: () => request('/comet/auth-token', { method: 'POST', resetCacheOnWrite: false }),
+  cometEnsureCpUser: (cpId) => request('/comet/ensure-user', { method: 'POST', body: { cp_id: cpId }, resetCacheOnWrite: false }),
   cometBroadcast: (payload) => request('/comet/broadcast', { method: 'POST', body: payload }),
   cometRequestChat: () => request('/comet/request-chat', { method: 'POST' }),
   cometSend: ({ cp_id = null, text }) => request('/comet/send', { method: 'POST', body: { cp_id, text } }),
@@ -307,6 +398,12 @@ export const api = {
 
   // Health
   health: () => request('/health', { auth: false }),
+
+  // Cache controls: invalidate(prefix) drops matching cached GETs (for changes
+  // caught by polling, not your own writes); resetCache() wipes all (auth
+  // change). Your own writes already clear the cache automatically.
+  invalidate: (prefix) => invalidateCache(prefix),
+  resetCache,
 };
 
 /**

@@ -10,6 +10,7 @@ import {
 } from '@cometchat/chat-uikit-react';
 import { CometChat } from '@cometchat/chat-sdk-javascript';
 import { loginCometChat } from '../cometchat';
+import { useTheme } from '../contexts/ThemeContext.jsx';
 import { api } from '../api';
 import ChatErrorBoundary from '../components/ChatErrorBoundary';
 import ChatComposer from '../components/ChatComposer';
@@ -18,6 +19,7 @@ import { IconChevron } from '../components/icons.jsx';
 const STAFF_UID = 'openhouse';
 
 export default function Messages({ onBack }) {
+  const { theme } = useTheme();
   const [state, setState] = useState({ ready: false, error: '', peer: null, notEnabled: false, requestPending: false });
   const [requested, setRequested] = useState(false);
   const [reqBusy, setReqBusy] = useState(false);
@@ -81,7 +83,7 @@ export default function Messages({ onBack }) {
         <div className="empty-state"><p>Loading chat…</p></div>
       ) : (
         <ChatErrorBoundary>
-          <CometChatProvider>
+          <CometChatProvider theme={theme}>
             <div className="cp-chat-pane">
               <CometChatMessageHeader user={state.peer} />
               <CometChatMessageList user={state.peer} />
