@@ -1,10 +1,10 @@
 /**
- * My Profile — identity card (left) + a coverage map (right, admin only),
+ * My Profile — identity card (left) + a coverage map (right; admin/manager/rm),
  * ported from Direct_Inventory's MyProfile/ScopeMap. The map plots the
  * societies of all distinct submissions using the bundled society coordinates
  * (src/data/societyCoords.json). Same CSS + view as Direct.
  */
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { api } from '../api';
 import Loading from '../components/Loading.jsx';
@@ -29,33 +29,51 @@ function managerName(user) {
 
 export default function Profile() {
   const { user } = useAuth();
-  const isAdmin = (user?.role || '').toLowerCase() === 'admin';
+  const roleLower = (user?.role || '').toLowerCase();
+  // Coverage map for admin + manager + rm. The list endpoint (@require_staff)
+  // scopes rows to the caller, so a manager/rm sees their own submissions.
+  const showMap = ['admin', 'manager', 'rm'].includes(roleLower);
+  const [heatmap, setHeatmap] = useState(false);   // dots vs heat map
+  const [whatToShow, setWhatToShow] = useState('all'); // 'all' | a city name
 
-  // Distinct societies of all submissions → the map's markers. Fetched once
-  // (cached) for admins only; the list endpoint returns per-stage first pages,
-  // which covers the societies in play for a "show everything" overview.
-  const [societies, setSocieties] = useState([]);
+  // Submissions → { counts per society, cities present, society→city }. Fetched
+  // once (cached); the list endpoint returns per-stage first pages, enough for
+  // a coverage overview.
+  const [mapData, setMapData] = useState({ counts: {}, cities: [], societyCity: {} });
   useEffect(() => {
-    if (!isAdmin) return undefined;
+    if (!showMap) return undefined;
     let alive = true;
     api.adminListSubmissions({ limit: 100, skip_counts: 'true' })
       .then((data) => {
         if (!alive) return;
-        const set = new Set();
+        const counts = {};
+        const citySet = new Set();
+        const societyCity = {};
         for (const s of (data.submissions || [])) {
           const soc = (s.society_name || '').trim();
-          if (soc) set.add(soc);
+          if (!soc) continue;
+          counts[soc] = (counts[soc] || 0) + 1;
+          const known = MAP_CITIES.find((c) => c.toLowerCase() === (s.city || '').trim().toLowerCase());
+          if (known) { citySet.add(known); societyCity[soc] = known; }
         }
-        setSocieties([...set]);
+        setMapData({ counts, cities: [...citySet], societyCity });
       })
       .catch(() => {});
     return () => { alive = false; };
-  }, [isAdmin]);
+  }, [showMap]);
+
+  // What the map plots: all societies, or just the picked city's.
+  const shown = useMemo(() => {
+    const names = Object.keys(mapData.counts);
+    if (whatToShow === 'all') {
+      return { societies: names, cities: mapData.cities.length ? mapData.cities : MAP_CITIES };
+    }
+    return { societies: names.filter((n) => mapData.societyCity[n] === whatToShow), cities: [whatToShow] };
+  }, [whatToShow, mapData]);
 
   if (!user) return <Loading />;
 
   const { name, phone, email, city, role } = user;
-  const roleLower = (role || '').toLowerCase();
   const showCity = ['viewer', 'rm', 'manager'].includes(roleLower);
   const mgrName = managerName(user);
   const showManager = ['rm', 'manager'].includes(roleLower) && !!mgrName;
@@ -113,21 +131,25 @@ export default function Profile() {
         <h2>My Profile</h2>
       </div>
 
-      {isAdmin ? (
+      {showMap ? (
         <div className="profile-grid2">
           <div className="profile-col">{detailsCard}</div>
           <div className="profile-col">
-            {/* What to show — for now, all distinct submissions. */}
             <div className="card-block pov-bar">
               <label>What to show</label>
-              <select className="role-select" value="all" onChange={() => {}}>
+              <select className="role-select" value={whatToShow} onChange={(e) => setWhatToShow(e.target.value)}>
                 <option value="all">All submissions</option>
+                {mapData.cities.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
+              <div className="view-toggle" role="tablist" style={{ marginLeft: 'auto' }}>
+                <button type="button" className={`vt-btn ${!heatmap ? 'on' : ''}`} onClick={() => setHeatmap(false)}>Dots</button>
+                <button type="button" className={`vt-btn ${heatmap ? 'on' : ''}`} onClick={() => setHeatmap(true)}>Heat map</button>
+              </div>
             </div>
             <div className="card-block scope-card">
               <h3>Coverage map <span className="muted"> · approximate</span></h3>
               <Suspense fallback={<div className="scope-map-skeleton">Loading map…</div>}>
-                <ScopeMap cities={MAP_CITIES} society={societies} micro_market={[]} />
+                <ScopeMap cities={shown.cities} society={shown.societies} societyCounts={mapData.counts} heatmap={heatmap} />
               </Suspense>
             </div>
           </div>
