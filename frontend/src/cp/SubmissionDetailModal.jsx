@@ -23,6 +23,7 @@ export default function SubmissionDetailModal({ submission, onClose }) {
   const close = () => { if (closing) return; setClosing(true); setTimeout(onClose, 250); };
   const [events, setEvents] = useState([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
+  const [showAllEvents, setShowAllEvents] = useState(false);
   const [mediaOpen, setMediaOpen] = useState(false);
   const [visitOpen, setVisitOpen] = useState(false);
   // Local copies so the "Uploaded media" gallery + limits update right after an
@@ -75,6 +76,11 @@ export default function SubmissionDetailModal({ submission, onClose }) {
 
   const notRejected = s.status !== 'Rejected' && s.status !== 'Price Rejected';
   const hasMedia = photos.length > 0 || videos.length > 0;
+
+  // Timeline: newest first, latest 2, then a "+N" button reveals the rest.
+  const sortedEvents = [...events].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  const shownEvents = showAllEvents ? sortedEvents : sortedEvents.slice(0, 2);
+  const extraEvents = sortedEvents.length - shownEvents.length;
 
   return (
     <>
@@ -232,8 +238,8 @@ export default function SubmissionDetailModal({ submission, onClose }) {
             </div>
           ) : (
             <div style={{ position: 'relative', paddingLeft: 20 }}>
-              {events.map((ev, i) => (
-                <div key={ev.id} style={{ position: 'relative', paddingBottom: i === events.length - 1 ? 0 : 14 }}>
+              {shownEvents.map((ev, i) => (
+                <div key={ev.id} style={{ position: 'relative', paddingBottom: i === shownEvents.length - 1 ? 0 : 14 }}>
                   {/* Dot */}
                   <div
                     style={{
@@ -243,7 +249,7 @@ export default function SubmissionDetailModal({ submission, onClose }) {
                     }}
                   />
                   {/* Line */}
-                  {i < events.length - 1 && (
+                  {i < shownEvents.length - 1 && (
                     <div
                       style={{
                         position: 'absolute', left: -12, top: 14, width: 2, bottom: -4,
@@ -271,6 +277,15 @@ export default function SubmissionDetailModal({ submission, onClose }) {
                   </div>
                 </div>
               ))}
+              {extraEvents > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllEvents(true)}
+                  style={{ background: 'none', border: 0, padding: '6px 0 0', color: 'var(--oh-orange)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
+                >
+                  +{extraEvents} more
+                </button>
+              )}
             </div>
           )}
 

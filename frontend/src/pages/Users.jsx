@@ -14,7 +14,7 @@
  *     patch_staff_user); we just explain why before the request 400s.
  *     Flipping an existing row to viewer prompts for a city if it doesn't
  *     already have one.
- *   - OH Properties access toggle, Active/Inactive + Deactivate/Re-activate,
+ *   - Active/Inactive + Deactivate/Re-activate,
  *     Force-logout (single) and Force-logout-all (confirm banner, same as
  *     CP's inline two-step confirm — no ConfirmDialog needed for this one
  *     since CP's own inline banner already reads clearly on a full page).
@@ -23,10 +23,12 @@
  * `.adduser-row` (CP's grid row) instead of CP's inline-styled overlay grid,
  * and an "All users" `.card-block` with `.data-table` (sortable headers)
  * instead of CP's plain inline-styled <table>. Same request shapes, same
- * guard/prompt logic, same columns split out per the Direct spec (Email /
- * Name / Phone / Role / OH-Properties / Status / Force-logout / Actions).
+ * guard/prompt logic. Columns: Name / Phone / Role / Force-logout / Actions
+ * (active/inactive is read off the Actions button, not its own column). An
+ * inline Edit panel per row edits name / phone / email and assigns a manager
+ * (rms.manager_id) — email lives only in that panel, never as a column.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 
 import { ApiError, api } from '../api';
 import { validatePhone, sanitizePhone } from '../format';
@@ -64,14 +66,11 @@ function SortableTh({ field, label, sort, onSort }) {
 function SkeletonRows() {
   return Array.from({ length: 5 }).map((_, i) => (
     <tr key={`sk-${i}`}>
-      <td><span className="inv-skel" style={{ width: '80%' }} /></td>
       <td><span className="inv-skel" style={{ width: '70%' }} /></td>
       <td><span className="inv-skel" style={{ width: '60%' }} /></td>
       <td><span className="inv-skel" style={{ width: 90 }} /></td>
       <td><span className="inv-skel" style={{ width: 60 }} /></td>
-      <td><span className="inv-skel" style={{ width: 50 }} /></td>
-      <td><span className="inv-skel" style={{ width: 60 }} /></td>
-      <td><span className="inv-skel" style={{ width: 70 }} /></td>
+      <td><span className="inv-skel" style={{ width: 120 }} /></td>
     </tr>
   ));
 }
@@ -101,6 +100,10 @@ export default function Users() {
 
   // Force logout all confirmation
   const [confirmForceAll, setConfirmForceAll] = useState(false);
+
+  // Inline row editor — which row's edit panel is open, plus its draft fields.
+  const [editingKey, setEditingKey] = useState(null);
+  const [editForm, setEditForm] = useState({ name: '', phone: '', email: '', manager_id: '' });
 
   // Client-side sort of the currently-loaded list. No field = CP's default
   // grouping (active first, then role, then name — mirrors the backend's
@@ -212,11 +215,6 @@ export default function Users() {
     patchUser(u, changes, () => api.adminPatchStaffUser(u.source, u.id, payload));
   };
 
-  const handleOhToggle = (u, next) => {
-    if (!confirm(`${next ? 'Allow' : 'Block'} OH Properties access for ${u.name || u.phone}?`)) return;
-    patchUser(u, { can_see_oh_properties: next }, () => api.adminPatchStaffUser(u.source, u.id, { can_see_oh_properties: next }));
-  };
-
   const handleDeactivate = (u) => {
     if (!confirm(`Deactivate ${u.name || u.phone}? They won't be able to log in.`)) return;
     // is_active:false → the row re-sorts to the bottom; the View Transition
@@ -228,6 +226,41 @@ export default function Users() {
     u, { is_active: true },
     () => api.adminPatchStaffUser(u.source, u.id, { is_active: true }),
   );
+
+  const startEdit = (u) => {
+    setEditingKey(userKey(u));
+    setEditForm({
+      name: u.name || '',
+      phone: sanitizePhone(u.phone || '').slice(-10),
+      email: u.email || '',
+      manager_id: u.manager_id != null ? String(u.manager_id) : '',
+    });
+  };
+
+  const cancelEdit = () => setEditingKey(null);
+
+  const saveEdit = async (u) => {
+    const name = editForm.name.trim();
+    if (!name) { alert('Name is required'); return; }
+    const phoneCheck = validatePhone(editForm.phone);
+    if (!phoneCheck.ok) { alert(`Phone: ${phoneCheck.error}`); return; }
+
+    // `fields` goes to the API (10-digit phone; backend adds the '+91 ' for rms).
+    // `changes` is the optimistic local patch (rms display phones with the prefix).
+    const email = editForm.email.trim() || null;
+    const fields = { name, phone: phoneCheck.cleaned, email };
+    const changes = {
+      name,
+      email,
+      phone: u.source === 'rm' ? `+91 ${phoneCheck.cleaned}` : phoneCheck.cleaned,
+    };
+    if (u.source === 'rm') {
+      fields.manager_id = editForm.manager_id ? Number(editForm.manager_id) : null;
+      changes.manager_id = fields.manager_id;
+    }
+    setEditingKey(null);
+    await patchUser(u, changes, () => api.adminPatchStaffUser(u.source, u.id, fields));
+  };
 
   const handleForceLogout = async (u) => {
     if (!confirm(`Force-logout ${u.name || u.phone}? Their next request will redirect them to login.`)) return;
@@ -289,6 +322,19 @@ export default function Users() {
     });
     return rows;
   }, [users, sort]);
+
+  // Manager assignment: the dropdown offers active managers; display resolves
+  // any manager_id (even an inactive one) back to a name.
+  const managers = useMemo(
+    () => users.filter((u) => u.source === 'rm' && u.role === 'manager' && u.is_active),
+    [users],
+  );
+  const rmById = useMemo(() => {
+    const m = new Map();
+    users.forEach((u) => { if (u.source === 'rm') m.set(u.id, u); });
+    return m;
+  }, [users]);
+  const managerName = (id) => { const m = rmById.get(id); return m ? (m.name || m.phone) : null; };
 
   const activeCount = users.filter((u) => u.is_active).length;
   const inactiveCount = users.length - activeCount;
@@ -398,12 +444,9 @@ export default function Users() {
           <table className="data-table">
             <thead>
               <tr>
-                <SortableTh field="email" label="Email" sort={sort} onSort={onSort} />
                 <SortableTh field="name" label="Name" sort={sort} onSort={onSort} />
                 <SortableTh field="phone" label="Phone" sort={sort} onSort={onSort} />
                 <SortableTh field="role" label="Role" sort={sort} onSort={onSort} />
-                <th>OH-Properties</th>
-                <SortableTh field="status" label="Status" sort={sort} onSort={onSort} />
                 <th>Force-logout</th>
                 <th>Actions</th>
               </tr>
@@ -413,18 +456,17 @@ export default function Users() {
                 <SkeletonRows />
               ) : sortedUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="muted" style={{ textAlign: 'center', padding: 30 }}>
+                  <td colSpan={5} className="muted" style={{ textAlign: 'center', padding: 30 }}>
                     No staff users yet. Add one above.
                   </td>
                 </tr>
               ) : (
                 sortedUsers.map((u) => (
+                  <Fragment key={userKey(u)}>
                   <tr
-                    key={`${u.source}-${u.id}`}
                     className={u.is_active ? '' : 'usr-inactive'}
                     style={{ viewTransitionName: `u-${userKey(u).replace(/[^a-z0-9-]/gi, '-')}` }}
                   >
-                    <td>{u.email || <span className="muted">—</span>}</td>
                     <td style={{ fontWeight: 600 }}>{u.name || '—'}</td>
                     <td>{u.phone || '—'}</td>
                     <td>
@@ -441,22 +483,9 @@ export default function Users() {
                       {u.role === 'viewer' && u.city && (
                         <div className="usr-scope muted" style={{ fontSize: 11, marginTop: 3 }}>📍 {u.city}</div>
                       )}
-                    </td>
-                    <td>
-                      <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
-                        <input
-                          type="checkbox"
-                          checked={u.can_see_oh_properties}
-                          onChange={(e) => handleOhToggle(u, e.target.checked)}
-                          disabled={!u.is_active}
-                        />
-                        {u.can_see_oh_properties ? 'Allowed' : 'Blocked'}
-                      </label>
-                    </td>
-                    <td>
-                      <span className={u.is_active ? 'pill pill-on' : 'pill'}>
-                        {u.is_active ? 'Active' : 'Inactive'}
-                      </span>
+                      {u.source === 'rm' && u.manager_id && managerName(u.manager_id) && (
+                        <div className="usr-scope muted" style={{ fontSize: 11, marginTop: 3 }}>↳ reports to {managerName(u.manager_id)}</div>
+                      )}
                     </td>
                     <td>
                       <button
@@ -469,13 +498,69 @@ export default function Users() {
                       </button>
                     </td>
                     <td>
-                      {u.is_active ? (
-                        <button type="button" className="btn-edit" onClick={() => handleDeactivate(u)}>Deactivate</button>
-                      ) : (
-                        <button type="button" className="btn-primary" onClick={() => handleReactivate(u)}>Re-activate</button>
-                      )}
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button type="button" className="btn-edit" onClick={() => startEdit(u)}>
+                          {editingKey === userKey(u) ? 'Editing…' : 'Edit'}
+                        </button>
+                        {u.is_active ? (
+                          <button type="button" className="btn-edit" onClick={() => handleDeactivate(u)}>Deactivate</button>
+                        ) : (
+                          <button type="button" className="btn-primary" onClick={() => handleReactivate(u)}>Re-activate</button>
+                        )}
+                      </div>
                     </td>
                   </tr>
+                  {editingKey === userKey(u) && (
+                    <tr className="usr-edit-row">
+                      <td colSpan={5}>
+                        <div className="usr-edit-form">
+                          <div className="au-field">
+                            <label>Name</label>
+                            <input
+                              value={editForm.name}
+                              onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+                            />
+                          </div>
+                          <div className="au-field">
+                            <label>Phone</label>
+                            <input
+                              value={editForm.phone}
+                              inputMode="numeric"
+                              onChange={(e) => setEditForm((f) => ({ ...f, phone: sanitizePhone(e.target.value) }))}
+                            />
+                          </div>
+                          <div className="au-field">
+                            <label>Email</label>
+                            <input
+                              type="email"
+                              value={editForm.email}
+                              onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
+                            />
+                          </div>
+                          {u.source === 'rm' && (
+                            <div className="au-field">
+                              <label>Manager</label>
+                              <select
+                                className="role-select"
+                                value={editForm.manager_id}
+                                onChange={(e) => setEditForm((f) => ({ ...f, manager_id: e.target.value }))}
+                              >
+                                <option value="">— None —</option>
+                                {managers.filter((m) => userKey(m) !== userKey(u)).map((m) => (
+                                  <option key={userKey(m)} value={m.id}>{m.name || m.phone}</option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
+                          <div className="au-actions" style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+                            <button type="button" className="btn-primary" onClick={() => saveEdit(u)}>Save</button>
+                            <button type="button" className="btn-ghost" onClick={cancelEdit}>Cancel</button>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  </Fragment>
                 ))
               )}
             </tbody>

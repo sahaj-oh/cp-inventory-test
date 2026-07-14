@@ -9,13 +9,13 @@ import Toast from './Toast.jsx';
 import CreateTicketButton from './tickets/CreateTicketButton.jsx';
 import { useUnreadChat } from '../hooks/useUnreadChat';
 import {
-  IconHome, IconBoard, IconEye, IconBuilding, IconTicket, IconLogs, IconUsers, IconProfile,
+  IconHome, IconBoard, IconEye, IconTicket, IconLogs, IconUsers, IconProfile,
   IconSun, IconMoon, IconMenu, IconLogout, IconChevron, IconPlus, IconChat, IconMegaphone,
 } from './icons.jsx';
 
 const TITLES = {
   '': 'Home', submissions: 'Submissions', impersonator: 'Impersonator',
-  'oh-properties': 'OH Properties', tickets: 'Tickets', logs: 'Activity Logs',
+  tickets: 'Tickets', logs: 'Activity Logs',
   users: 'Users', profile: 'My Profile', chat: 'Chat',
 };
 
@@ -102,7 +102,6 @@ export default function Layout() {
 
         {navItem({ to: '/', label: 'Home', Icon: IconHome, end: true })}
         {navItem({ to: '/submissions', label: 'Submissions', Icon: IconBoard })}
-        {navItem({ to: '/oh-properties', label: 'OH Properties', Icon: IconBuilding })}
         {canTickets && navItem({ to: '/tickets', label: 'Tickets', Icon: IconTicket, count: ticketDot })}
         {canTickets && navItem({ to: '/chat', label: 'Chat', Icon: IconChat, count: chatUnread })}
 

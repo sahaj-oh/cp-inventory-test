@@ -12,6 +12,7 @@ import CardDetailModal from '../components/submissions/CardDetailModal.jsx';
 import FilterModal from '../components/submissions/FilterModal.jsx';
 import BulkBar from '../components/submissions/BulkBar.jsx';
 import AddInventoryOnBehalf from '../components/submissions/AddInventoryOnBehalf.jsx';
+import SegToggle from '../components/SegToggle.jsx';
 import Loading from '../components/Loading.jsx';
 
 const CITY_TABS = ['All', 'Noida', 'Gurgaon', 'Ghaziabad'];
@@ -360,10 +361,11 @@ export default function Submissions() {
         </button>
 
         {/* Board/Table toggle — last, after Filters. */}
-        <div className="view-toggle" role="tablist">
-          <button className={`vt-btn ${view === 'board' ? 'on' : ''}`} onClick={() => setView('board')}>Board</button>
-          <button className={`vt-btn ${view === 'table' ? 'on' : ''}`} onClick={() => setView('table')}>Table</button>
-        </div>
+        <SegToggle
+          options={[{ value: 'board', label: 'Board' }, { value: 'table', label: 'Table' }]}
+          value={view}
+          onChange={setView}
+        />
       </div>
 
       {/* Select + Download CSV live on the top strip (Layout), portaled so they

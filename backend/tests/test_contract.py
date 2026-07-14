@@ -8,7 +8,7 @@ MUST_KEEP = {
     "/api/health", "/api/auth/send-otp", "/api/auth/verify-otp", "/api/auth/logout", "/api/me",
     "/api/my-rm", "/api/rm-contacts", "/api/societies", "/api/media/upload",
     "/api/submissions", "/api/check-duplicate", "/api/admin/submissions",
-    "/api/admin/external-inventory", "/api/admin/activity-log", "/api/admin/staff-users",
+    "/api/admin/activity-log", "/api/admin/staff-users",
     "/api/sync/collated-data", "/api/sync/channel-partners", "/api/sync/submissions",
 }
 MUST_ADD = {

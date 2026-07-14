@@ -6,9 +6,9 @@ import Login from './pages/Login.jsx';
 import Home from './pages/Home.jsx';
 import Submissions from './pages/Submissions.jsx';
 import CpApp from './pages/CpApp.jsx';
+import DotLoader from './components/DotLoader.jsx';
 
 const Impersonator = lazy(() => import('./pages/Impersonator.jsx'));
-const OhProperties = lazy(() => import('./pages/OhProperties.jsx'));
 const Logs = lazy(() => import('./pages/Logs.jsx'));
 const Users = lazy(() => import('./pages/Users.jsx'));
 const Tickets = lazy(() => import('./pages/Tickets.jsx'));
@@ -28,19 +28,23 @@ function RequireRole({ user, roles, children }) {
 
 export default function App() {
   const { user, bootstrapping } = useAuth();
-  // Blank frame during the session probe — prevents a one-frame Login flash
-  // without a full-screen "Loading…" takeover.
-  if (bootstrapping) return <div style={{ minHeight: '100vh', background: 'var(--bg)' }} />;
+  // Bouncing-dots loader during the session probe + while a lazy route chunk
+  // loads — the two most visible loading moments.
+  const pageLoader = (
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'grid', placeItems: 'center' }}>
+      <DotLoader />
+    </div>
+  );
+  if (bootstrapping) return pageLoader;
   if (!user) return <Login />;
   if (!STAFF.includes(user.role)) return <CpApp />;   // role === 'cp'
 
   return (
-    <Suspense fallback={<div style={{ minHeight: '100vh', background: 'var(--bg)' }} />}>
+    <Suspense fallback={pageLoader}>
       <Routes>
         <Route element={<Layout />}>
           <Route path="/" element={<Home />} />
           <Route path="/submissions" element={<Submissions />} />
-          <Route path="/oh-properties" element={<OhProperties />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/tickets" element={<RequireRole user={user} roles={['manager', 'rm']}><Tickets /></RequireRole>} />
           <Route path="/impersonator" element={<RequireRole user={user} roles={[]}><Impersonator /></RequireRole>} />

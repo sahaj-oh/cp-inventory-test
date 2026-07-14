@@ -4,7 +4,7 @@ import { useLocation, useOutlet } from 'react-router-dom';
 // Sidebar hierarchy — a page's rank decides the slide direction. Navigating to
 // a LOWER page (bigger rank) slides the incoming content in from the right;
 // navigating UP slides it in from the left.
-const ORDER = ['', 'submissions', 'oh-properties', 'tickets', 'chat', 'impersonator', 'users', 'logs'];
+const ORDER = ['', 'submissions', 'tickets', 'chat', 'impersonator', 'users', 'logs'];
 const rankOf = (pathname) => {
   const i = ORDER.indexOf(pathname.split('/')[1] || '');
   return i === -1 ? ORDER.length : i; // unknown (e.g. /profile) sits after the list

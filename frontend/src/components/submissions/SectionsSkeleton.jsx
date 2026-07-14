@@ -19,18 +19,18 @@ function SkelCard({ lines }) {
   );
 }
 
-// Column titles mirror the real expanded columns (Counter Offer is usually
-// empty so it's omitted from the placeholder).
+// Column titles mirror the real expanded columns (same order: Status, Notes,
+// Chat, Tickets, Unit details, Pricing, Activity, Attachments). Counter Offer
+// folds into Pricing and is usually empty, so it's omitted from the placeholder.
 const SKEL_COLS = [
   { titles: ['Status'], rows: 2 },
+  { titles: ['Notes'], rows: 3 },
+  { titles: ['Chat'], rows: 5, cls: 'expand-col-chat' },
+  { titles: ['Tickets'], rows: 2 },
   { titles: ['Unit details'], rows: 6 },
   { titles: ['Pricing', 'People'], rows: 3 },
-  { titles: ['Assigned RM'], rows: 2 },
-  { titles: ['Notes'], rows: 3 },
-  { titles: ['Tickets'], rows: 2 },
-  { titles: ['Activity'], rows: 3 },
+  { titles: ['Assigned RM', 'Activity'], rows: 3 },
   { titles: ['Attachments'], rows: 2 },
-  { titles: ['Uploaded media'], rows: 2 },
 ];
 
 export default function SectionsSkeleton({ stacked, columns }) {
@@ -39,7 +39,7 @@ export default function SectionsSkeleton({ stacked, columns }) {
       <div className="expand-scroll">
         <div className="expand-inner expand-cols">
           {SKEL_COLS.map((col, i) => (
-            <div key={i} className="expand-col">
+            <div key={i} className={`expand-col${col.cls ? ` ${col.cls}` : ''}`}>
               {col.titles.map((t, ti) => (
                 <div key={ti} className="card-block">
                   <h3>{t}</h3>

@@ -91,7 +91,14 @@ function Banners({ s }) {
 // "each section independently mountable" convention).
 function ActivityTimeline({ s }) {
   const [lightboxId, setLightboxId] = useState(null);
-  const events = (s.events || []).filter((ev) => ev.kind !== 'comment');
+  const [showAll, setShowAll] = useState(false);
+  // Newest first; show the latest 2, then a "+N" button to reveal the rest.
+  const events = (s.events || [])
+    .filter((ev) => ev.kind !== 'comment')
+    .slice()
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  const shown = showAll ? events : events.slice(0, 2);
+  const extra = events.length - shown.length;
 
   return (
     <div className="card-block">
@@ -99,8 +106,9 @@ function ActivityTimeline({ s }) {
       {events.length === 0 ? (
         <div className="muted" style={{ fontSize: 13 }}>No activity yet.</div>
       ) : (
+        <>
         <div className="note-list">
-          {events.map((ev) => (
+          {shown.map((ev) => (
             <div key={ev.id} className="note-item">
               <div className="note-body">
                 <div className="note-meta">
@@ -143,6 +151,12 @@ function ActivityTimeline({ s }) {
             </div>
           ))}
         </div>
+        {extra > 0 && (
+          <button type="button" className="btn-link" style={{ marginTop: 8 }} onClick={() => setShowAll(true)}>
+            +{extra} more
+          </button>
+        )}
+        </>
       )}
 
       {lightboxId && (
@@ -220,11 +234,16 @@ export default function SubmissionSections({ s, canAct, onChanged, onOpenCpHisto
   // columns (e.g. Counter Offer with no offer) collapse via `.expand-col:empty`.
   if (columns) {
     const canCreateTickets = canAct && role !== 'rm';
+    // Unit details are editable by every non-CP user (this component is never
+    // rendered for CPs, so any viewer here is staff).
+    const canEditUnit = role !== 'cp';
     return (
       <div>
         <Banners s={s} />
         {/* .expand-scroll (width:1px; min-width:100%) keeps the wide column row
-            scrolling WITHIN the table width instead of widening the whole table. */}
+            scrolling WITHIN the table width instead of widening the whole table.
+            Column order: Status, Notes, Chat, Tickets, Unit details, Pricing,
+            Activity (Assigned RM on top), Attachments. */}
         <div className="expand-scroll">
         <div className="expand-inner expand-cols">
           <div className="expand-col">
@@ -233,32 +252,7 @@ export default function SubmissionSections({ s, canAct, onChanged, onOpenCpHisto
             <ScheduleVisitSection submission={s} canAct={canAct} onChanged={onChanged} />
           </div>
           <div className="expand-col">
-            <UnitDetailsSection submission={s} canAct={canAct} onChanged={onChanged} />
-          </div>
-          <div className="expand-col">
-            <PricingSection submission={s} canAct={canAct} onChanged={onChanged} />
-            <PeopleSection submission={s} onOpenCpHistory={onOpenCpHistory} />
-          </div>
-          <div className="expand-col">
-            <ReassignRmSection submission={s} canAct={canAct} onChanged={onChanged} />
-          </div>
-          <div className="expand-col">
             <NotesSection submission={s} canAct={canAct} onChanged={onChanged} />
-          </div>
-          <div className="expand-col">
-            <TicketsSection submissionId={s.id} publicId={s.public_id} canCreate={canCreateTickets} />
-          </div>
-          <div className="expand-col">
-            <CounterOfferSection submission={s} canAct={canAct} onChanged={onChanged} />
-          </div>
-          <div className="expand-col">
-            <ActivityTimeline s={s} />
-          </div>
-          <div className="expand-col">
-            <MediaSection submission={s} canAct={canAct} onChanged={onChanged} only="attachments" />
-          </div>
-          <div className="expand-col">
-            <MediaSection submission={s} canAct={canAct} onChanged={onChanged} only="media" />
           </div>
           <div className="expand-col expand-col-chat">
             {canChat && (
@@ -267,6 +261,24 @@ export default function SubmissionSections({ s, canAct, onChanged, onOpenCpHisto
                 <CpThread cpId={s.cp_id} />
               </div>
             )}
+          </div>
+          <div className="expand-col">
+            <TicketsSection submissionId={s.id} publicId={s.public_id} canCreate={canCreateTickets} />
+          </div>
+          <div className="expand-col">
+            <UnitDetailsSection submission={s} canAct={canEditUnit} onChanged={onChanged} />
+          </div>
+          <div className="expand-col">
+            <PricingSection submission={s} canAct={canAct} onChanged={onChanged} />
+            <PeopleSection submission={s} onOpenCpHistory={onOpenCpHistory} />
+            <CounterOfferSection submission={s} canAct={canAct} onChanged={onChanged} />
+          </div>
+          <div className="expand-col">
+            <ReassignRmSection submission={s} canAct={canAct} onChanged={onChanged} />
+            <ActivityTimeline s={s} />
+          </div>
+          <div className="expand-col">
+            <MediaSection submission={s} canAct={canAct} onChanged={onChanged} only="attachments" />
           </div>
         </div>
         </div>

@@ -11,7 +11,7 @@
  * shape (`{ rows, total, has_more, cap_reached }`) — this project's own
  * backend (backend/routes/admin.py `list_activity_log`) mirrors CP's shape
  * exactly. No hooks/ dir exists in this project, so the debounce is inlined
- * (mirrors OhProperties.jsx's `search`/`searchInput` split) rather than a
+ * (a committed-on-Enter `search`/`searchInput` split) rather than a
  * `useDebouncedValue` hook.
  *
  * Re-skinned into Direct's `.al-*` shell (single-line filter bar + sticky
@@ -217,9 +217,9 @@ export default function Logs() {
   const [page, setPage] = useState(1);
 
   // Client-only sort of the currently-loaded page. The backend's fixed
-  // ORDER BY created_at DESC, id DESC has no `sort`/`dir` params (unlike
-  // e.g. adminListExternalInventory), so "sortable" here re-orders the
-  // ≤100 rows already on screen rather than re-querying the server.
+  // ORDER BY created_at DESC, id DESC has no `sort`/`dir` params, so
+  // "sortable" here re-orders the ≤100 rows already on screen rather
+  // than re-querying the server.
   const [sort, setSort] = useState({ field: 'created_at', dir: 'desc' });
 
   const [data, setData] = useState({ rows: [], total: 0, has_more: false, cap_reached: false });
@@ -328,6 +328,8 @@ export default function Logs() {
           placeholder="Search by UID (e.g. OHLNC0091)"
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') setSearch(searchInput); }}
+          enterKeyHint="search"
         />
         <select className="al-filter-select" value={action} onChange={(e) => setAction(e.target.value)}>
           <option value="">Action</option>

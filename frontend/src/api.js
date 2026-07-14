@@ -344,18 +344,12 @@ export const api = {
       },
     }),
 
-  // External inventory: merged collated_data ("D Data") + properties ("F Data")
-  // viewer for the admin "External Data" page. Server-side paginated.
-  // Filters: { q, city, type ('D'|'F'|''), page, page_size }
-  adminListExternalInventory: (filters = {}) =>
-    request(`/admin/external-inventory${buildQuery(filters)}`),
-
   // Admin Panel — staff user management (admin only).
   adminListStaffUsers: () => request('/admin/staff-users'),
   // body: { name, phone, role: 'admin'|'rm'|'manager', email? }
   adminAddStaffUser: (payload) =>
     request('/admin/staff-users', { method: 'POST', body: payload }),
-  // source: 'cp' | 'rm'.  fields: { role?, can_see_oh_properties?, is_active? }
+  // source: 'cp' | 'rm'.  fields: { role?, is_active? }
   adminPatchStaffUser: (source, id, fields) =>
     request(`/admin/staff-users/${source}/${id}`, { method: 'PATCH', body: fields }),
   adminForceLogoutUser: (source, id) =>
@@ -378,7 +372,7 @@ export const api = {
   adminListActivityLog: (filters = {}) =>
     request(`/admin/activity-log${buildQuery(filters)}`),
   // Distinct values for the filter dropdowns. Computed over the whole table,
-  // not the current filter set (same anti-narrowing rule as OH Properties).
+  // not the current filter set (same anti-narrowing rule as the facet dropdowns).
   adminListActivityLogFacets: () => request('/admin/activity-log/facets'),
 
   // Chat (CometChat) — backend provisions the CometChat user, mints login

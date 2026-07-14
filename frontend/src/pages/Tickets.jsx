@@ -19,6 +19,7 @@ import { api } from '../api';
 import { formatDateTime, timeAgo } from '../format';
 import { ticketBadge } from '../components/tickets/ticketStatus.js';
 import TicketModal from '../components/tickets/TicketModal.jsx';
+import SegToggle from '../components/SegToggle.jsx';
 import { IconTicket } from '../components/icons.jsx';
 
 const TABS = [
@@ -104,18 +105,11 @@ export default function Tickets() {
       </div>
 
       <div className="toolbar">
-        <div className="city-tabs">
-          {TABS.map((t) => (
-            <button
-              key={t.key}
-              type="button"
-              className={`tab${tab === t.key ? ' tab-active' : ''}`}
-              onClick={() => setTab(t.key)}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
+        <SegToggle
+          options={TABS.map((t) => ({ value: t.key, label: t.label }))}
+          value={tab}
+          onChange={setTab}
+        />
         <div className="muted" style={{ marginLeft: 'auto', fontSize: 13, fontWeight: 600 }}>
           {total} ticket{total === 1 ? '' : 's'}
         </div>

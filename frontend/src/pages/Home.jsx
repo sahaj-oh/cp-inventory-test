@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useUnreadConversations } from '../hooks/useUnreadConversations';
+import SegToggle from '../components/SegToggle.jsx';
 import { stageMeta, stageLabel } from '../format';
 
 // Pipeline order (funnel top → bottom, then the two terminal rejections). Each
@@ -23,8 +24,9 @@ export default function Home() {
   const [counts, setCounts] = useState({});
   const [pending, setPending] = useState(0);
   const [loading, setLoading] = useState(true);
-  // Today's new submissions per stage: { count, latest } for Unapproved/Submitted.
-  const [todayNew, setTodayNew] = useState({ loading: true, Unapproved: { count: 0, latest: null }, Submitted: { count: 0, latest: null } });
+  // New submissions per stage ({ count, latest }) for the chosen range.
+  const [nsRange, setNsRange] = useState('today'); // 'today' | 'week'
+  const [newSubs, setNewSubs] = useState({ loading: true, Unapproved: { count: 0, latest: null }, Submitted: { count: 0, latest: null } });
 
   useEffect(() => {
     let alive = true;
@@ -35,29 +37,34 @@ export default function Home() {
     if (!isViewer) {
       api.ticketsPendingCount().then((r) => { if (alive) setPending(r?.count || 0); }).catch(() => {});
     }
+    return () => { alive = false; };
+  }, [isViewer]);
 
-    // Today's new submissions: date_from=date_to=today filters submitted_at to
-    // today AND makes `counts` today-scoped; limit:1 returns the latest row per
-    // stage (PARTITION BY status ORDER BY submitted_at DESC). Local date, since
-    // "added today" means the user's day.
-    const d = new Date();
-    const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    api.adminListSubmissions({ date_from: day, date_to: day, limit: 1 })
+  // New submissions in the chosen range. date_from..date_to scopes submitted_at
+  // AND makes `counts` range-scoped; limit:1 → latest row per stage (PARTITION
+  // BY status ORDER BY submitted_at DESC). Local dates. Week = rolling 7 days.
+  useEffect(() => {
+    let alive = true;
+    setNewSubs((s) => ({ ...s, loading: true }));
+    const fmt = (dt) => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+    const today = new Date();
+    const from = new Date(today);
+    if (nsRange === 'week') from.setDate(today.getDate() - 6);
+    api.adminListSubmissions({ date_from: fmt(from), date_to: fmt(today), limit: 1 })
       .then((res) => {
         if (!alive) return;
         const subs = res.submissions || [];
         const c = res.counts || {};
         const latestOf = (stage) => subs.find((s) => s.status === stage) || null;
-        setTodayNew({
+        setNewSubs({
           loading: false,
           Unapproved: { count: c.Unapproved || 0, latest: latestOf('Unapproved') },
           Submitted: { count: c.Submitted || 0, latest: latestOf('Submitted') },
         });
       })
-      .catch(() => { if (alive) setTodayNew((t) => ({ ...t, loading: false })); });
-
+      .catch(() => { if (alive) setNewSubs((s) => ({ ...s, loading: false })); });
     return () => { alive = false; };
-  }, [isViewer]);
+  }, [nsRange]);
 
   // Pipeline rows (skip admin-only stages for non-admins) + the max for scaling.
   const stages = PIPELINE.filter((k) => isAdmin || !stageMeta(k).adminOnly);
@@ -82,20 +89,30 @@ export default function Home() {
         {/* New Submissions (left, narrow = Outcomes width) — today's Unapproved
             & Submitted counts + the latest of each. Whole card filters to both. */}
         <Link to="/submissions?status=Unapproved,Submitted" className="report-card home-newsubs">
-          <div className="report-head"><h3>New Submissions</h3><span className="muted">today</span></div>
+          <div className="report-head">
+            <h3>New Submissions</h3>
+            {/* Range toggle (bare) — SegToggle stops the click bubbling to the card Link. */}
+            <SegToggle
+              bare
+              options={[{ value: 'today', label: 'Today' }, { value: 'week', label: 'This week' }]}
+              value={nsRange}
+              onChange={setNsRange}
+              style={{ marginLeft: 'auto' }}
+            />
+          </div>
           <div className="ns-cols">
             {['Unapproved', 'Submitted'].map((stage) => {
-              const d = todayNew[stage];
+              const d = newSubs[stage];
               const latest = d.latest;
               const unit = latest && (latest.tower && latest.unit_no ? `${latest.tower}-${latest.unit_no}` : (latest.unit_no || ''));
               const meta = latest ? [unit, latest.bhk ? `${latest.bhk} BHK` : ''].filter(Boolean).join(' · ') : '';
               return (
                 <div key={stage} className="ns-col">
                   <div className="ns-stage" style={{ color: stageMeta(stage).color }}>{stage}</div>
-                  <div className="ns-count">{todayNew.loading ? '—' : d.count}</div>
-                  <div className="ns-cap muted">added today</div>
+                  <div className="ns-count">{newSubs.loading ? '—' : d.count}</div>
+                  <div className="ns-cap muted">added {nsRange === 'week' ? 'this week' : 'today'}</div>
                   <div className="ns-latest">
-                    {todayNew.loading ? (
+                    {newSubs.loading ? (
                       <span className="inv-skel" style={{ width: '85%', height: 12, display: 'block' }} />
                     ) : latest ? (
                       <>
@@ -103,7 +120,7 @@ export default function Home() {
                         <div className="ns-latest-meta muted">{meta || latest.public_id || ''}</div>
                       </>
                     ) : (
-                      <div className="ns-latest-meta muted">Nothing new today</div>
+                      <div className="ns-latest-meta muted">Nothing new {nsRange === 'week' ? 'this week' : 'today'}</div>
                     )}
                   </div>
                 </div>

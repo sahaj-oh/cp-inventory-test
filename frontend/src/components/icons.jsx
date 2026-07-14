@@ -41,7 +41,7 @@ export const IconTasks = (p) => <S {...p}><rect x="6" y="4" width="12" height="1
 // Speech bubble — tickets / conversations on a property.
 export const IconTicket = (p) => <S {...p}><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" /><path d="M13 5v3M13 11v2M13 16v3" /></S>;
 
-// --- CP nav additions (Submissions / Impersonator / OH Properties / Profile) ---
+// --- CP nav additions (Submissions / Impersonator / Profile) ---
 export const IconBoard = (p) => <S {...p}><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></S>;
 export const IconEye = (p) => <S {...p}><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></S>;
 export const IconBuilding = (p) => <S {...p}><rect x="4" y="3" width="16" height="18" rx="1" /><path d="M8 7h.01M12 7h.01M16 7h.01M8 11h.01M12 11h.01M16 11h.01M8 15h.01M16 15h.01" /><path d="M10 21v-4h4v4" /></S>;

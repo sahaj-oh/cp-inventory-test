@@ -15,6 +15,7 @@ import {
 import MatchDetailsModal from '../MatchDetailsModal.jsx';
 import ExpandPanel from './ExpandPanel.jsx';
 import Loading from '../Loading.jsx';
+import DotLoader from '../DotLoader.jsx';
 import { IconCalendar } from '../icons.jsx';
 
 /**
@@ -200,17 +201,16 @@ export default function TableView({
           </tr>
         </thead>
         <tbody>
-          {/* Initial load: keep the table (header + rows) and shimmer the data
-              in — so it never pops in as a whole blank→full swap. */}
-          {loading && rows.length === 0 && Array.from({ length: 8 }).map((_, i) => (
-            <tr key={`sk-${i}`} className="inv-row inv-row-skel">
-              {bulkMode && <td className="inv-td-sel"><span className="inv-skel" style={{ width: 16, height: 16 }} /></td>}
-              {['62%', '82%', '46%', '54%', '50%', '60%', '48%', '72%', '58%', '52%'].map((w, c) => (
-                <td key={c}><span className="inv-skel" style={{ width: w }} /></td>
-              ))}
+          {/* On any load — search, filter, sort or city change — drop the stale
+              rows immediately and show the bouncing-dots loader, so old data
+              never sits under the new query while the request is in flight. */}
+          {loading ? (
+            <tr>
+              <td colSpan={colCount} style={{ textAlign: 'center', padding: '56px 0' }}>
+                <DotLoader />
+              </td>
             </tr>
-          ))}
-          {rows.map((s) => {
+          ) : rows.map((s) => {
             const stage = stageMeta(s.status);
             const isWeakMatch = s.weak_match === true;
             const isRejected = s.status === 'Price Rejected' || s.status === 'Rejected';

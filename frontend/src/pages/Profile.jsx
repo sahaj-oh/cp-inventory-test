@@ -7,6 +7,7 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { api } from '../api';
+import SegToggle from '../components/SegToggle.jsx';
 import Loading from '../components/Loading.jsx';
 
 // MapLibre is heavy — only load it when the map is actually shown.
@@ -62,6 +63,16 @@ export default function Profile() {
     return () => { alive = false; };
   }, [showMap]);
 
+  // RM roster → team hierarchy. /admin/rms is @require_staff, so admin/manager/rm
+  // can all list it; each row carries { id, name, city, is_manager, manager_id }.
+  const [rms, setRms] = useState([]);
+  useEffect(() => {
+    if (!showMap) return undefined;
+    let alive = true;
+    api.adminListRms().then((r) => { if (alive) setRms(r.rms || []); }).catch(() => {});
+    return () => { alive = false; };
+  }, [showMap]);
+
   // What the map plots: all societies, or just the picked city's.
   const shown = useMemo(() => {
     const names = Object.keys(mapData.counts);
@@ -77,6 +88,61 @@ export default function Profile() {
   const showCity = ['viewer', 'rm', 'manager'].includes(roleLower);
   const mgrName = managerName(user);
   const showManager = ['rm', 'manager'].includes(roleLower) && !!mgrName;
+
+  // Team hierarchy, derived from the RM roster. Managers are RMs with
+  // is_manager; a team is the RMs whose manager_id points at that manager.
+  const managers = rms.filter((r) => r.is_manager);
+  const teamOf = (mgrId) => rms.filter((r) => r.manager_id === mgrId && r.id !== mgrId);
+  const managerTeams = managers.map((m) => ({ manager: m, team: teamOf(m.id) }));
+  const myTeam = user.rm_id ? teamOf(user.rm_id) : [];
+  const myManager = user.managerId ? rms.find((r) => r.id === user.managerId) : null;
+
+  const rmLine = (r) => (
+    <li key={r.id} className="pf-team-item">
+      <span className="pf-team-name">{r.name || '—'}</span>
+      {r.city && <span className="muted"> · {r.city}</span>}
+    </li>
+  );
+
+  // admin → every manager + their team; manager → my team; rm → my manager.
+  let teamCard = null;
+  if (roleLower === 'admin') {
+    teamCard = (
+      <div className="card-block">
+        <h3>Managers &amp; Teams <span className="muted">{managers.length}</span></h3>
+        {managerTeams.length === 0 ? (
+          <p className="muted">No managers yet.</p>
+        ) : managerTeams.map(({ manager, team }) => (
+          <div key={manager.id} className="pf-team-group">
+            <div className="pf-team-mgr">
+              {manager.name || '—'}
+              {manager.city && <span className="muted"> · {manager.city}</span>}
+              <span className="muted"> · {team.length} RM{team.length === 1 ? '' : 's'}</span>
+            </div>
+            {team.length > 0 && <ul className="pf-team-list">{team.map(rmLine)}</ul>}
+          </div>
+        ))}
+      </div>
+    );
+  } else if (roleLower === 'manager') {
+    teamCard = (
+      <div className="card-block">
+        <h3>My Team <span className="muted">{myTeam.length}</span></h3>
+        {myTeam.length === 0
+          ? <p className="muted">No RMs report to you yet.</p>
+          : <ul className="pf-team-list">{myTeam.map(rmLine)}</ul>}
+      </div>
+    );
+  } else if (roleLower === 'rm') {
+    teamCard = (
+      <div className="card-block">
+        <h3>My Manager</h3>
+        {myManager
+          ? <div className="pf-team-mgr">{myManager.name || '—'}{myManager.city && <span className="muted"> · {myManager.city}</span>}</div>
+          : <p className="muted">No manager assigned.</p>}
+      </div>
+    );
+  }
 
   const detailsCard = (
     <div className="card-block">
@@ -133,7 +199,7 @@ export default function Profile() {
 
       {showMap ? (
         <div className="profile-grid2">
-          <div className="profile-col">{detailsCard}</div>
+          <div className="profile-col">{detailsCard}{teamCard}</div>
           <div className="profile-col">
             <div className="card-block pov-bar">
               <label>What to show</label>
@@ -141,10 +207,12 @@ export default function Profile() {
                 <option value="all">All submissions</option>
                 {mapData.cities.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
-              <div className="view-toggle" role="tablist" style={{ marginLeft: 'auto' }}>
-                <button type="button" className={`vt-btn ${!heatmap ? 'on' : ''}`} onClick={() => setHeatmap(false)}>Dots</button>
-                <button type="button" className={`vt-btn ${heatmap ? 'on' : ''}`} onClick={() => setHeatmap(true)}>Heat map</button>
-              </div>
+              <SegToggle
+                options={[{ value: 'dots', label: 'Dots' }, { value: 'heat', label: 'Heat map' }]}
+                value={heatmap ? 'heat' : 'dots'}
+                onChange={(v) => setHeatmap(v === 'heat')}
+                style={{ marginLeft: 'auto' }}
+              />
             </div>
             <div className="card-block scope-card">
               <h3>Coverage map <span className="muted"> · approximate</span></h3>

@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext.jsx';
 import ConfirmDialog from '../components/ConfirmDialog';
+import LegalLinks from '../components/LegalLinks';
 import { IconPhone, IconLogout, IconChevron, IconSun, IconMoon } from '../components/icons.jsx';
 
 function Row({ label, value }) {
@@ -71,10 +72,14 @@ export default function Profile({ onBack, rmPhone, rmName }) {
         )}
       </div>
 
-      <div style={{ padding: '4px 20px 28px' }}>
+      <div style={{ padding: '4px 20px 12px' }}>
         <button className="secondary-btn prof-logout" onClick={() => setShowLogout(true)}>
           <IconLogout size={18} /> Log out
         </button>
+      </div>
+
+      <div style={{ padding: '0 20px 32px' }}>
+        <LegalLinks prefix="" />
       </div>
 
       <ConfirmDialog

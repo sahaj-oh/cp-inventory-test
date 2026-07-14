@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { sanitizePhone } from '../format';
 import OtpInput from '../components/OtpInput';
+import LegalLinks from '../components/LegalLinks';
 
 const RESEND_COOLDOWN_SEC = 30;
 
@@ -82,7 +83,7 @@ export default function Login() {
   };
 
   return (
-    <div className="login-wrap">
+    <div className="login-wrap" data-theme="light">
       <div className="login-card card-block">
         <div className="login-brand">
           <img src="/oh_full_logo.png" alt="Openhouse" className="login-logo" />
@@ -91,21 +92,25 @@ export default function Login() {
 
         {step === 'phone' && (
           <form onSubmit={handleSendOtp}>
-            <label>Phone number</label>
-            <input
-              type="tel"
-              inputMode="numeric"
-              placeholder="10-digit mobile number"
-              value={phone}
-              onChange={(e) => { setPhone(sanitizePhone(e.target.value)); setError(''); setRmContacts(null); }}
-              autoFocus
-              maxLength={15}
-            />
+            <label>Mobile number</label>
+            <div className="phone-field">
+              <span className="phone-cc">+91</span>
+              <input
+                type="tel"
+                inputMode="numeric"
+                className="phone-input"
+                placeholder="00000 00000"
+                value={phone}
+                onChange={(e) => { setPhone(sanitizePhone(e.target.value)); setError(''); setRmContacts(null); }}
+                autoFocus
+                maxLength={15}
+              />
+            </div>
             {error && <div className="modal-error" style={{ marginTop: 10 }}>{error}</div>}
             <button type="submit" className="btn-primary login-submit" disabled={loading}>
               {loading ? 'Sending OTP…' : 'Send OTP'}
             </button>
-            <div className="login-hint muted">We'll text you a 6-digit code.</div>
+            <div className="login-hint muted">We'll text you a 6-digit code ;)</div>
 
             {rmContacts && (
               <div className="login-notreg">
@@ -152,6 +157,8 @@ export default function Login() {
           </form>
         )}
       </div>
+
+      <LegalLinks className="login-legal" />
     </div>
   );
 }
